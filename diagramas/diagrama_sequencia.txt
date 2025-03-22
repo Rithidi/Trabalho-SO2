@@ -12,7 +12,7 @@ Message: cliente
 
 
 
-Client->Message: client
+Client->Message: create
 Message->Communicator: send(m)
 Communicator->Protocol: send(F,t,d,s)
 Protocol->NIC Ethernet: alloc(d, P, s)
