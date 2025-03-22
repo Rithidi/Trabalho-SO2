@@ -1,0 +1,36 @@
+title This is a title
+
+participant Client
+participant Message
+participant Communicator
+participant Protocol
+participant NIC Ethernet
+participant Engine
+participant NIC Fisica
+
+Message: cliente
+
+
+
+Client->Message: client
+Message->Communicator: send(m)
+Communicator->Protocol: send(F,t,d,s)
+Protocol->NIC Ethernet: alloc(d, P, s)
+NIC Ethernet->Protocol: Buffer
+Protocol->NIC Ethernet: send(b)
+NIC Ethernet->Engine: sendto(d,s,P,d)
+Engine->NIC Fisica:
+NIC Fisica->Engine: interrupcao(F)
+Engine->Engine: signal
+Engine->NIC Ethernet: notify(c, d)
+NIC Ethernet->Protocol: notify(c, d)
+NIC Ethernet->Protocol: update(c, P, b)
+
+Protocol->Communicator: notify
+Protocol->Communicator: update(c,b)
+Protocol->NIC Ethernet: free
+
+Communicator->Communicator: insert(d)
+Communicator->Communicator:sem v
+Message->Communicator: sem p
+Client->Message: receive()
