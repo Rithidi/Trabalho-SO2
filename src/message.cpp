@@ -1,30 +1,25 @@
 #include "../include/message.hpp"
-#include <cstring>
+#include <cstring>  // Para memcpy
 
-
- // Construtor que aceita dados brutos
-Message::Message(const unsigned char* bytes, unsigned int size) {
-    set_data(bytes, size);
+// Construtor padrão que inicializa o tamanho da mensagem como 0.
+Message::Message() {
+    _size = 0;
 }
 
-// Define novos dados
-void Message::set_data(const unsigned char* bytes, unsigned int size) {
-    if (bytes && size > 0) {
-        _data.resize(size);               // Redimensiona o vetor
-        memcpy(_data.data(), bytes, size); // Copia os bytes
-    } else {
-        _data.clear();
-    }
+// Retorna um ponteiro para os dados da mensagem.
+uint8_t* Message::data() {
+    return _data;
 }
 
-// Acesso aos dados
-const unsigned char* Message::data() const {
-    // Retorna nullptr se não houver dados
-    return _data.empty() ? nullptr : _data.data();
+// Retorna o tamanho atual da mensagem.
+size_t Message::size() const {
+    return _size;
 }
 
-// Pega o tamanho dos dados
-std::size_t Message::size() const {
-    return _data.size();
-} 
+// Define os dados da mensagem copiando de uma fonte (src) até o tamanho especificado.
+// Se o tamanho exceder o limite máximo, ele será truncado para MAX_SIZE.
+void Message::setData(const void* src, size_t size) {
+    _size = (size > MAX_SIZE) ? MAX_SIZE : size;
+    memcpy(_data, src, _size);
+}
 

@@ -1,24 +1,29 @@
-#ifndef MESSAGE_HPP
-#define MESSAGE_HPP
+#pragma once
+#include <cstdint>
 
-#include <vector>
-
+// Classe Message representa uma mensagem com tamanho máximo definido (MTU Ethernet).
 class Message {
-public:
-    // Construtor principal (recebe bytes + tamanho)
-    Message(const unsigned char* data = nullptr, unsigned int size = 0);
+    public:
+        // Tamanho máximo da mensagem (1500 bytes, típico do MTU Ethernet).
+        static constexpr size_t MAX_SIZE = 1500;
 
-    // Define os dados da mensagem
-    void set_data(const unsigned char* data, unsigned int size);
+        // Construtor padrão que inicializa o tamanho da mensagem como 0.
+        Message();
 
-    // Retorna ponteiro para os dados (nullptr se vazio)
-    const unsigned char* data() const;
+        // Retorna um ponteiro para os dados da mensagem.
+        uint8_t* data();
 
-    // Retorna tamanho em bytes
-    std::size_t size() const;
+        // Retorna o tamanho atual da mensagem.
+        size_t size() const;
+        
+        // Define os dados da mensagem copiando de uma fonte (src) até o tamanho especificado.
+        // Se o tamanho exceder o limite máximo, ele será truncado para MAX_SIZE.
+        void setData(const void* src, size_t size);
 
-private:
-    std::vector<unsigned char> _data;
+    private:
+        // Buffer para armazenar os dados da mensagem, com tamanho máximo definido.
+        uint8_t _data[MAX_SIZE];
+
+        // Tamanho atual da mensagem armazenada no buffer.
+        size_t _size;
 };
-
-#endif // MESSAGE_HPP
