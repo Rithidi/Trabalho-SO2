@@ -1,3 +1,8 @@
+#pragma once
+#include <observer.hpp> // Inclui a classe base Observer e Observed
+#include <message.hpp> // Inclui a classe Message
+
+
 /**
  * @class Communicator
  * @brief Classe template para comunicação entre componentes usando um canal específico
@@ -28,7 +33,7 @@ class Communicator: public Concurrent_Observer<typename Channel::Observer::Obser
          * 
          * Registra este comunicador no canal fornecido com o endereço especificado.
          */
-        Communicator(Channel* channel, Address address): {
+        Communicator(Channel* channel, Address address) {
             _channel = channel; // Inicializa o canal
             _address = address; // Inicializa o endereço
             
@@ -69,11 +74,8 @@ class Communicator: public Concurrent_Observer<typename Channel::Observer::Obser
             Channel::Address from; // Endereço de origem da mensagem
             // Recebe os dados do canal
             int size = _channel->receive(buf, &from, message->data(), message->size());
-            
-            if(size > 0)
-                return true; // Mensagem recebida com sucesso
                 
-            return false; // Falha ao receber mensagem
+            return size > 0; // Retorna true se a mensagem foi recebida, false caso contrário
         }
 
     private:
