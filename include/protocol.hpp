@@ -1,6 +1,6 @@
 #pragma once
-#include <observer.hpp> // Inclui a classe base Observer e Observed
-#include <message.hpp> // Inclui a classe Message
+#include "observer.hpp" // Inclui a classe base Observer e Observed
+#include "message.hpp" // Inclui a classe Message
 
 
 /**
