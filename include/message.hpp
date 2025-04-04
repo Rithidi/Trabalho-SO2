@@ -1,29 +1,43 @@
 #pragma once
 #include <cstdint>
+#include <cstring>
 
-// Classe Message representa uma mensagem com tamanho máximo definido (MTU Ethernet).
+// Classe que representa uma mensagem genérica para comunicação
 class Message {
-    public:
-        // Tamanho máximo da mensagem (1500 bytes, típico do MTU Ethernet).
-        static constexpr size_t MAX_SIZE = 1500;
+public:
+    // Tamanho máximo da mensagem (em bytes)
+    static constexpr size_t MAX_SIZE = 1500;
+    
+    // Construtor: inicializa a mensagem com tamanho zero
+    Message() : _size(0) {}
+    
+    // Retorna um ponteiro constante para os dados (para leitura)
+    const uint8_t* data() const {
+        return _data;
+    }
 
-        // Construtor padrão que inicializa o tamanho da mensagem como 0.
-        Message();
+    // Retorna um ponteiro para os dados (para escrita)
+    uint8_t* data() {
+        return _data;
+    }
+    
+    // Retorna o tamanho atual da mensagem
+    size_t size() const {
+        return _size;
+    }
+    
+    // Define os dados da mensagem copiando do ponteiro 'src'
+    void setData(const void* src, size_t size) {
+        // Limita o tamanho ao máximo permitido
+        _size = (size > MAX_SIZE) ? MAX_SIZE : size;
+        // Copia os dados para o buffer interno
+        memcpy(_data, src, _size);
+    }
 
-        // Retorna um ponteiro para os dados da mensagem.
-        uint8_t* data();
+private:
+    // Buffer que armazena os dados da mensagem
+    uint8_t _data[MAX_SIZE];
 
-        // Retorna o tamanho atual da mensagem.
-        size_t size() const;
-        
-        // Define os dados da mensagem copiando de uma fonte (src) até o tamanho especificado.
-        // Se o tamanho exceder o limite máximo, ele será truncado para MAX_SIZE.
-        void setData(const void* src, size_t size);
-
-    private:
-        // Buffer para armazenar os dados da mensagem, com tamanho máximo definido.
-        uint8_t _data[MAX_SIZE];
-
-        // Tamanho atual da mensagem armazenada no buffer.
-        size_t _size;
+    // Tamanho real da mensagem armazenada
+    size_t _size;
 };

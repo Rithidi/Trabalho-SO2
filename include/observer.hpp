@@ -1,86 +1,126 @@
 #pragma once
-#include <semaphore.h>  // Para semáforos POSIX
+#include <semaphore.h>
+#include <pthread.h>
 #include <list>
 #include <queue>
-#include <utility> // para std::pair
+#include <memory>
+#include <algorithm>
 
-// Forward declaration
-template<typename D, typename C = void>
+// Declaração antecipada da classe Observer
+template<typename D, typename C>
 class Concurrent_Observer;
 
-//---------------------------------------------------------
-// Concurrent_Observed (Subject)
-//---------------------------------------------------------
+// Classe que representa um objeto que pode ser observado (Observed)
 template<typename D, typename C = void>
 class Concurrent_Observed {
-    friend class Concurrent_Observer<D, C>;
 public:
-    typedef D Observed_Data;
-    typedef C Observing_Condition;
-    
-    void attach(Concurrent_Observer<D, C>* o, C c) {
-        _observers.emplace_back(o, c); // Insere no final
-        _observers.sort([](const auto& a, const auto& b) {
-            return a.second < b.second; // Ordena por condição
-        });
+    using DataType = D;               // Tipo dos dados transmitidos
+    using ConditionType = C;          // Tipo da condição (ex: endereço)
+    using ObserverPair = std::pair<Concurrent_Observer<D, C>*, C>;  // Par (observador, condição)
+
+    Concurrent_Observed() {
+        pthread_mutex_init(&_mutex, nullptr); // Inicializa o mutex
     }
-    
+
+    ~Concurrent_Observed() {
+        pthread_mutex_destroy(&_mutex); // Destroi o mutex
+    }
+
+    // Associa um observador a uma condição (ex: endereço de destino)
+    bool attach(Concurrent_Observer<D, C>* o, C c) {
+        pthread_mutex_lock(&_mutex);
+        // Verifica se já está registrado
+        auto it = std::find_if(_observers.begin(), _observers.end(),
+            [o, c](const auto& pair) { return pair.first == o && pair.second == c; });
+
+        if (it == _observers.end()) {
+            // Adiciona se ainda não existir
+            _observers.emplace_back(o, c);
+            // Ordena com base na condição (pode ser útil para prioridades)
+            _observers.sort([](const auto& a, const auto& b) {
+                return a.second < b.second;
+            });
+        }
+        pthread_mutex_unlock(&_mutex);
+        return it == _observers.end();
+    }
+
+    // Remove um observador da lista
     void detach(Concurrent_Observer<D, C>* o, C c) {
+        pthread_mutex_lock(&_mutex);
         _observers.remove_if([o, c](const auto& pair) {
             return pair.first == o && pair.second == c;
         });
+        pthread_mutex_unlock(&_mutex);
     }
-    
+
+    // Notifica todos os observadores associados à condição 'c'
     bool notify(C c, D* d) {
+        pthread_mutex_lock(&_mutex);
         bool notified = false;
-        for (auto& [observer, condition] : _observers) {
-            if (condition == c) {
-                observer->update(c, d);
+        for (auto& pair : _observers) {
+            if (pair.second == c) {
+                pair.first->update(c, d); // Chama update no observer
                 notified = true;
             }
         }
+        pthread_mutex_unlock(&_mutex);
         return notified;
     }
 
 private:
-    std::list<std::pair<Concurrent_Observer<D, C>*, C>> _observers; // Lista ordenada
+    std::list<ObserverPair> _observers;  // Lista de observadores com suas condições
+    pthread_mutex_t _mutex;              // Mutex para garantir acesso seguro
 };
 
-//---------------------------------------------------------
-// Concurrent_Observer (Observer)
-//---------------------------------------------------------
-template<typename D, typename C = void>
+// Classe que representa um observador concorrente (Observer)
+template<typename D, typename C>
 class Concurrent_Observer {
-    friend class Concurrent_Observed<D, C>;
 public:
-    typedef D Observed_Data;
-    typedef C Observing_Condition;
-    
+    using DataType = D;
+    using ConditionType = C;
+
     Concurrent_Observer() {
-        sem_init(&_semaphore, 0, 0); // Inicializado bloqueado
+        sem_init(&_semaphore, 0, 0);              // Inicializa o semáforo
+        pthread_mutex_init(&_mutex, nullptr);     // Inicializa o mutex
     }
-    
+
     ~Concurrent_Observer() {
-        sem_destroy(&_semaphore);
-        // Limpa a fila se necessário
-        while (!_data.empty()) {
-            delete _data.front();
-            _data.pop();
-        }
+        pthread_mutex_lock(&_mutex);
+        while (!_data.empty()) _data.pop();       // Limpa a fila de dados
+        pthread_mutex_unlock(&_mutex);
+        pthread_mutex_destroy(&_mutex);           // Destroi o mutex
+        sem_destroy(&_semaphore);                 // Destroi o semáforo
     }
-    
+
+    // Função chamada quando o observado envia uma notificação
     void update(C c, D* d) {
-        _data.push(d);
-        sem_post(&_semaphore); // Libera uma thread
+        pthread_mutex_lock(&_mutex);
+        _data.push(std::unique_ptr<D>(d));        // Armazena os dados recebidos
+        pthread_mutex_unlock(&_mutex);
+        sem_post(&_semaphore);                    // Sinaliza que há novos dados
     }
-    
-    D* updated() {
-        sem_wait(&_semaphore); // Bloqueia até receber dados
-        D* item = _data.pop();
+
+    // Bloqueia até que dados estejam disponíveis e os retorna
+    std::unique_ptr<D> updated() {
+        sem_wait(&_semaphore);                    // Aguarda sinal do semáforo
+        pthread_mutex_lock(&_mutex);
+        auto item = std::move(_data.front());     // Obtém o item da fila
+        _data.pop();
+        pthread_mutex_unlock(&_mutex);
         return item;
     }
 
+    // Verifica se a fila de dados está vazia
+    bool empty() const {
+        pthread_mutex_lock(&_mutex);
+        bool is_empty = _data.empty();
+        pthread_mutex_unlock(&_mutex);
+        return is_empty;
+    }
+
 private:
-    sem_t _semaphore;
-    std::queue<D*> _data; // FIFO
+    sem_t _semaphore;                             // Semáforo para sincronização
+    mutable pthread_mutex_t _mutex;               // Mutex para acesso à fila
+    std::queue<std::unique_ptr<D>> _data;         // Fila com os dados recebidos
 };
