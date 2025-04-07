@@ -1,81 +1,41 @@
-// Inclusão dos cabeçalhos necessários
-#include "../include/communicator.hpp"  // Comunicador entre componentes
-#include "../include/protocol.hpp"     // Protocolo de comunicação
-#include "../include/nic.hpp"          // Interface de rede
-#include "../include/engine.hpp"       // Motor de comunicação de baixo nível
-#include "../include/message.hpp"      // Estrutura de mensagem
-#include <iostream>                    // Para entrada/saída
-#include <thread>                      // Para trabalhar com threads
-#include <cstring>                     // Para funções de manipulação de strings
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include "concurrent_observer.h"
 
-using namespace std;
+using namespace std::chrono_literals;
 
-// Função para o carro transmissor
-void carro_transmissor() {
-    // Cria a interface de rede do carro transmissor
-    NIC<Engine> nic;
-    
-    // Configura o protocolo de comunicação usando a interface de rede
-    Protocol<NIC<Engine>> protocol(&nic);
-    
-    // Cria o comunicador para a porta 8000 usando o endereço da NIC
-    Communicator<Protocol<NIC<Engine>>> comm(&protocol, 
-        Protocol<NIC<Engine>>::Address(nic.get_address(), 8000));
+using Data = int;
+using Condition = int;
 
-    cout << "[TRANSMISSOR] Preparado para enviar..." << endl;
-
-    // Espera 1 segundo para garantir que o receptor esteja pronto
-    this_thread::sleep_for(chrono::seconds(1));
-
-    // Prepara a mensagem a ser enviada
-    Message msg;
-    const char* mensagem = "oi carro";  // Mensagem fixa de teste
-    msg.setData(mensagem, strlen(mensagem) + 1);  // +1 para incluir o '\0'
-
-    // Envia a mensagem e verifica se foi bem sucedido
-    if (comm.send(&msg)) {
-        cout << "[TRANSMISSOR] Mensagem enviada: \"" << mensagem << "\"" << endl;
-    } else {
-        cerr << "[TRANSMISSOR] Erro ao enviar mensagem" << endl;
+void producer(Concurrent_Observed<Data, Condition>* observed) {
+    for (int i = 0; i < 5; ++i) {
+        std::this_thread::sleep_for(500ms);
+        Data* d = new Data(i);
+        observed->notify(0, d);
+        std::cout << "[Producer] Sent: " << *d << std::endl;
     }
 }
 
-// Função para o carro receptor
-void carro_receptor() {
-    // Cria a interface de rede do carro receptor
-    NIC<Engine> nic;
-    
-    // Configura o protocolo de comunicação usando a interface de rede
-    Protocol<NIC<Engine>> protocol(&nic);
-    
-    // Cria o comunicador para a porta 8000 usando o endereço da NIC
-    Communicator<Protocol<NIC<Engine>>> comm(&protocol, 
-        Protocol<NIC<Engine>>::Address(nic.get_address(), 8000));
-
-    cout << "[RECEPTOR] Aguardando mensagem..." << endl;
-
-    // Variável para armazenar a mensagem recebida
-    Message received;
-    
-    // Tenta receber a mensagem (operção bloqueante)
-    if (comm.receive(&received)) {
-        cout << "[RECEPTOR] Mensagem recebida: \"" << (const char*)received.data() << "\"" << endl;
-    } else {
-        cerr << "[RECEPTOR] Erro ao receber mensagem" << endl;
+void consumer(Concurrent_Observer<Data, Condition>* observer) {
+    for (int i = 0; i < 5; ++i) {
+        Data* d = observer->updated();
+        std::cout << "[Consumer] Received: " << *d << std::endl;
+        delete d;
     }
 }
 
 int main() {
-    // Cria duas threads para simular os dois carros:
-    // - Uma thread para o carro transmissor
-    // - Outra thread para o carro receptor
-    thread transmitter(carro_transmissor);
-    thread receiver(carro_receptor);
+    Concurrent_Observed<Data, Condition> observed;
+    Concurrent_Observer<Data, Condition> observer;
 
-    // Aguarda ambas as threads terminarem sua execução
-    // (join() bloqueia até a thread completar)
-    transmitter.join();
-    receiver.join();
+    observed.attach(&observer, 0);
 
-    return 0;  // Fim do programa
+    std::thread prod(producer, &observed);
+    std::thread cons(consumer, &observer);
+
+    prod.join();
+    cons.join();
+
+    return 0;
 }
