@@ -1,57 +1,73 @@
-
+#pragma once
 
 #include <tuple>
 #include <list>
 #include <mutex>
 #include <vector>
+#include <semaphore.h>
 
-// Forward declaration of Concurrent_Observer
+
 class Concurrent_Observer {
 public:
-    void update(const std::vector<uint8_t>& data);
+    // Porta do observador
+    int port;
+public:
+    // Construtor: inicializa a porta e o semáforo
+    Concurrent_Observer(int port) {
+        this->port = port; // Inicializa a porta do observador
+        sem_init(&semaphore, 0, 0); // Inicializa o semáforo com valor 0
+    }
+
+    void update(const std::vector<uint8_t>& data) {
+        // Adiciona os dados recebidos ao buffer
+        data_buffer.push_back(data);
+        // Incrementa semáforo para notificar que novos dados estão disponíveis
+        sem_post(&semaphore);
+    }
+
+    std::vector<uint8_t>* updated() {
+        // Espera até que novos dados estejam disponíveis
+        sem_wait(&semaphore);
+        // Retorna o último conjunto de dados recebidos
+        return &data_buffer.back();
+    }
+
+private:
+    sem_t semaphore;
+    std::vector<std::vector<uint8_t>> data_buffer; // Buffer de dados do observador
 };
 
-// Tupla de observador e condição de observação (numero da porta)
-using ObserverEntry = std::tuple<Concurrent_Observer*, int>;
+
 class Concurrent_Observed {
     public:
         // Adiciona um observador à lista de observadores
-        void attach(Concurrent_Observer* observer, int port) {
+        void attach(Concurrent_Observer* observer) {
             mutex.lock();
-            // Adciona tupla (observador, numero da porta) na lista de observadores
-            observers.emplace_back(observer, port);
+            observers.emplace_back(observer);
             mutex.unlock();
         }
 
         // Remove um observador da lista de observadores
         void detach(Concurrent_Observer* observer) {
             mutex.lock();
-            // Remove o observador da lista com mesmo numero de porta
-            for (auto it = observers.begin(); it != observers.end(); ) {
-                if (std::get<0>(*it) == observer) {
-                    it = observers.erase(it);
-                } else {
-                    ++it;
-                }
-            }
+            observers.remove(observer); // Remove o observador da lista
             mutex.unlock();
         }
 
         // Notifica todos os observadores com o mesmo numero de porta
         void notify(int port, const std::vector<uint8_t>& data) {
             mutex.lock();
-            for (const auto& entry : observers) {
-                if (std::get<1>(entry) == port) {
-                    std::get<0>(entry)->update(data); // Chama o método update do observador
+            for (Concurrent_Observer* observer : observers) {
+                if (observer->port == port) {
+                    observer->update(data); // Atualiza o observador com os dados
                 }
             }
             mutex.unlock();
         }
     
     private:
-        std::list<ObserverEntry> observers;
+        std::list<Concurrent_Observer*> observers;
         std::mutex mutex;
-
 };
 
 
