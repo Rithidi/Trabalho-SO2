@@ -1,50 +1,54 @@
 #ifndef LIST_H
 #define LIST_H
 
-template<typename T>
+#include <list>
+
+template <typename T>
 class List {
-private:
-    struct Node {
-        T value;
-        Node* next;
-        Node(const T& v) : value(v), next(nullptr) {}
-    };
-
-    Node* _head = nullptr;
-    Node* _tail = nullptr;
-
 public:
-    ~List() {
-        while (_head) {
-            Node* tmp = _head;
-            _head = _head->next;
-            delete tmp;
-        }
+    void insert(T* item) {
+        _list.push_back(item);
     }
 
-    void insert(const T& value) {
-        Node* node = new Node(value);
-        if (_tail) {
-            _tail->next = node;
-            _tail = node;
-        } else {
-            _head = _tail = node;
-        }
+    T* remove() {
+        if (_list.empty()) return nullptr;
+        T* item = _list.front();
+        _list.pop_front();
+        return item;
     }
 
-    T remove() {
-        if (!_head) return T(); // ou lança exceção
-        Node* node = _head;
-        T value = node->value;
-        _head = node->next;
-        if (!_head) _tail = nullptr;
-        delete node;
-        return value;
-    }
-
-    bool empty() const {
-        return !_head;
-    }
+private:
+    std::list<T*> _list;
 };
 
-#endif
+// Ordered_List permite armazenar objetos com "condição"
+template <typename T, typename C>
+class Ordered_List {
+public:
+    class Iterator {
+    public:
+        Iterator(typename std::list<T*>::iterator it) : _it(it) {}
+        Iterator& operator++() { ++_it; return *this; }
+        bool operator!=(const Iterator& other) const { return _it != other._it; }
+        T* operator->() const { return *_it; }
+
+    private:
+        typename std::list<T*>::iterator _it;
+    };
+
+    void insert(T* t) {
+        _list.push_back(t);
+    }
+
+    void remove(T* t) {
+        _list.remove(t);
+    }
+
+    Iterator begin() { return Iterator(_list.begin()); }
+    Iterator end() { return Iterator(_list.end()); }
+
+private:
+    std::list<T*> _list;
+};
+
+#endif // LIST_H

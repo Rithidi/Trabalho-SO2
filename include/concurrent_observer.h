@@ -4,53 +4,51 @@
 #include "semaphore.h"
 #include "list.h"
 
+// Forward declaration
 template<typename D, typename C = void>
 class Concurrent_Observer;
 
-template<typename D, typename C = void>
-class Concurrent_Observed {
+template<typename D, typename C>
+class Concurrent_Observed
+{
     friend class Concurrent_Observer<D, C>;
 
 public:
     typedef D Observed_Data;
     typedef C Observing_Condition;
+    typedef Ordered_List<Concurrent_Observer<D, C>, C> Observers;
 
     Concurrent_Observed() {}
     ~Concurrent_Observed() {}
 
     void attach(Concurrent_Observer<D, C>* o, C c) {
+        o->set_rank(c);      
         _observers.insert(o);
     }
+    
 
     void detach(Concurrent_Observer<D, C>* o, C c) {
-        // remove lógica simplificada: remove o primeiro que bater o ponteiro
-        List<Concurrent_Observer<D, C>*> new_list;
-        while (!_observers.empty()) {
-            auto obs = _observers.remove();
-            if (obs != o)
-                new_list.insert(obs);
-        }
-        _observers = std::move(new_list);
+        _observers.remove(o);
     }
 
     bool notify(C c, D* d) {
         bool notified = false;
-        // notifica todos (ignora condição, pois é mock inicial)
-        List<Concurrent_Observer<D, C>*> copy = _observers;
-        while (!copy.empty()) {
-            auto obs = copy.remove();
-            obs->update(c, d);
-            notified = true;
+        for (auto obs = _observers.begin(); obs != _observers.end(); ++obs) {
+            if (obs->rank() == c) {
+                obs->update(c, d);
+                notified = true;
+            }
         }
         return notified;
     }
 
 private:
-    List<Concurrent_Observer<D, C>*> _observers;
+    Observers _observers;
 };
 
 template<typename D, typename C>
-class Concurrent_Observer {
+class Concurrent_Observer
+{
     friend class Concurrent_Observed<D, C>;
 
 public:
@@ -58,21 +56,30 @@ public:
     typedef C Observing_Condition;
 
     Concurrent_Observer() : _semaphore(0) {}
-    ~Concurrent_Observer() {}
 
-    void update(C c, D* d) {
-        _data.insert(d);
-        _semaphore.v();
-    }
+    ~Concurrent_Observer() {}
 
     D* updated() {
         _semaphore.p();
         return _data.remove();
     }
 
+    C rank() const { return _rank; }
+
 private:
+    void update(C c, D* d) {
+        D* copy = new D(*d);
+        _data.insert(copy);
+        _semaphore.v();
+    }
+
+    void set_rank(C c) { _rank = c; }
+
+private:
+    C _rank; 
     Semaphore _semaphore;
-    List<D*> _data;
+    List<D> _data;
 };
 
-#endif
+
+#endif 

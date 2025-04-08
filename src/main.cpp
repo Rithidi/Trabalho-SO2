@@ -14,8 +14,10 @@ void producer(Concurrent_Observed<Data, Condition>* observed) {
         Data* d = new Data(i);
         observed->notify(0, d);
         std::cout << "[Producer] Sent: " << *d << std::endl;
+        delete d;
     }
 }
+
 
 void consumer(Concurrent_Observer<Data, Condition>* observer) {
     for (int i = 0; i < 5; ++i) {

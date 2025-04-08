@@ -1,16 +1,11 @@
 CXX = g++
 CXXFLAGS = -Wall -std=c++17 -pthread -Iinclude
 SRC = src/main.cpp
-TARGET = bin/main
+OUT = bin/main
 
-all: $(TARGET)
-
-$(TARGET): $(SRC)
-	@mkdir -p bin
-	$(CXX) $(CXXFLAGS) $^ -o $@
-
-run: all
-	./$(TARGET)
+all:
+	mkdir -p bin
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(OUT)
 
 clean:
-	rm -rf bin
+	rm -rf bin/*

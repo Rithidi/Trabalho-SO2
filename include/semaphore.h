@@ -1,29 +1,27 @@
 #pragma once
-#ifndef SEMAPHORE_H
-#define SEMAPHORE_H
 
-#include <semaphore.h>
+#include <mutex>
+#include <condition_variable>
 
 class Semaphore {
 public:
-    Semaphore(int value = 0) {
-        sem_init(&_sem, 0, value);
+    explicit Semaphore(int count = 0)
+        : _count(count) {}
+
+    void p() {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _cv.wait(lock, [&]() { return _count > 0; });
+        _count--;
     }
 
-    ~Semaphore() {
-        sem_destroy(&_sem);
-    }
-
-    void p() { // wait
-        sem_wait(&_sem);
-    }
-
-    void v() { // signal
-        sem_post(&_sem);
+    void v() {
+        std::unique_lock<std::mutex> lock(_mutex);
+        _count++;
+        _cv.notify_one();
     }
 
 private:
-    sem_t _sem;
+    std::mutex _mutex;
+    std::condition_variable _cv;
+    int _count;
 };
-
-#endif
