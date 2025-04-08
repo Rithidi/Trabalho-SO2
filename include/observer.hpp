@@ -38,6 +38,7 @@ private:
 };
 
 
+// Uma instancia para cada 
 class Concurrent_Observed {
     public:
         // Adiciona um observador à lista de observadores
@@ -71,7 +72,41 @@ class Concurrent_Observed {
 };
 
 
-class Conditional_Data_Observer;
+// Instanciado para cada numero de protocolo diferente que deseja-se observar.
+class Conditional_Data_Observer {
+    public:
+        // Número de protocolo usado para identificar o tipo de dados que o observador deve processar
+        int protocol_number;
+        // Construtor: inicializa a porta
+        Conditional_Data_Observer(int protocol_number) : protocol_number(protocol_number) {};
 
+        void update(const std::vector<uint8_t>& buffer) {
+            // Processa os dados recebidos
+            process(buffer);
+        }
+};
 
-class Conditional_Data_Observed;
+// Uma instancia para comunicar Conditional_Data_Observers quando um frame de um respectivo  num de protocolo é recebido.
+class Conditional_Data_Observed {
+    public:
+        // Adiciona um observador à lista de observadores
+        void attach(Conditional_Data_Observer* data_obs) {
+            data_observers.emplace_back(data_obs); // Adiciona o observador na lista
+        }
+
+        // Remove um observador da lista de observadores
+        void detach(Conditional_Data_Observer* data_obs) {
+            data_observers.remove(data_obs); // Remove o observador da lista
+        }
+
+        // Notifica todos os observadores com o mesmo numero de protocolo
+        void notify(int protocol_number, const std::vector<uint8_t>& buffer) {
+            for (Conditional_Data_Observer* data_obs : data_observers) {
+                if (data_obs->protocol_number == protocol_number) {
+                    data_obs->update(buffer); // Atualiza o observador com o endereço do buffer
+                }
+            }
+        }
+    private:
+        std::list<Conditional_Data_Observer*> data_observers;
+};
