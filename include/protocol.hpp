@@ -31,10 +31,9 @@ class Protocol : public Concurrent_Observed {
          // unsigned int s = NIC::receive(buf, &from.paddr, &to.paddr, data, size)
          // NIC::free(buf)
          // return s;
-
-      static void attach(Observer * obs, Address address);
       
-      static void detach(Observer * obs, Address address);
+      static void attach(Observer * obs, Address address); // metodos da classe Concurrent_Observed
+      static void detach(Observer * obs, Address address); // metodos da classe Concurrent_Observed
       
       void update(typename NIC::Observed * obs, NIC::Protocol_Number prot, Buffer * buf) {
          
