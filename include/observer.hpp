@@ -18,8 +18,11 @@ public:
     }
 
     void update(Message message) {
+        mutex.lock();
         // Adiciona os dados recebidos ao buffer
         _message_buffer.push(message);
+        mutex.unlock();
+        
         // Incrementa semáforo para notificar que novos dados estão disponíveis
         sem_post(&semaphore);
     }
@@ -27,15 +30,20 @@ public:
     Message updated() {
         // Espera até que novos dados estejam disponíveis
         sem_wait(&semaphore);
+
+        mutex.lock();
         // Obtém o último conjunto de dados recebidos
         Message message = _message_buffer.front();
         _message_buffer.pop(); // Remove o elemento da fila
+        mutex.unlock();
+
         return message;
     }
 
 private:
     sem_t semaphore;
     std::queue<Message> _message_buffer; // Fila de mensagens recebidas.
+    std::mutex mutex; // Mutex para proteger o acesso à fila de mensagens
 };
 
 
