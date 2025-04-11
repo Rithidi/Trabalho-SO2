@@ -9,6 +9,7 @@
 
 
 using Protocol_Number = Ethernet::Protocol_Number;
+using Address = Ethernet::Address;
 
 class Protocol : public Concurrent_Observed {
    public:
@@ -17,10 +18,10 @@ class Protocol : public Concurrent_Observed {
 
    Protocol_Number protocol_number;
 
-      Protocol(NIC* nic, Protocol_Number protocol_number) {
-         this->_nic = nic;
-         this->protocol_number = protocol_number;
-         this->_data_observed = Conditional_Data_Observer(this, protocol_number);
+      Protocol(NIC* nic, Protocol_Number protocol_number) : _nic(nic), protocol_number(protocol_number) {
+         // Inicializa o observador com o número do protocolo
+         _data_observed.protocol_number = protocol_number;
+
          _nic->attach(_data_observed, protocol_number);
       };
 
@@ -29,9 +30,9 @@ class Protocol : public Concurrent_Observed {
       };
 
    public:
-      int send(Address from, Address to, const void * data, unsigned int size) {
+      int send(Address from, Address to, const void* data, unsigned int size) {
          // Aloca buffer para o cabeçalho + dados
-         Buffer* buf = nic->alloc(to, protocol_number, size + sizeof(Ethernet::Header) + 14); // tamanho: mensagem + cabecalho_aplicacao + cabecalho_ethernet
+         Buffer* buf = _nic->alloc(to, protocol_number, size + sizeof(Ethernet::Header) + 14); // tamanho: mensagem + cabecalho_aplicacao + cabecalho_ethernet
 
          // Verifica se o buffer foi alocado corretamente
          if (buf == nullptr) return -1;
@@ -44,15 +45,25 @@ class Protocol : public Concurrent_Observed {
          std::memcpy(buf->frame.payload, data, size);
 
          // Envia o frame pela NIC
-         return nic->send(buf);
+         return _nic->send(buf);
       }
 
-      static int receive(Buffer * buf, Address from, void * data, unsigned int size) {
+      void receive(Buffer* buf) {
+         // Endereco de destino do frame recebido
+         Address dst = buf->frame.header.dst_address;
+         // Endereco de origem do frame recebido
+         Address src = buf->frame.header.src_address;
+
+         // Tamanho do payload recebido
+         unsigned int payload_size = buf->size - sizeof(Ethernet::Header) - 14; // tamanho: mensagem + cabecalho_aplicacao + cabecalho_ethernet
          
-     }
+         Message message; // Mensagem a ser enviada para o observador
+         message.setData(buf->frame.payload, payload_size); // Copia os dados do payload para a mensagem
 
-     void update(typename NIC::Observed * obs, NIC::Protocol_Number prot, Buffer * buf) {
+         notify(dst, message); // Notifica os observadores com o endereço de destino e a mensagem recebida
 
+         // Libera o buffer alocado para o frame
+         _nic->free(buf);
       }
   
    private:

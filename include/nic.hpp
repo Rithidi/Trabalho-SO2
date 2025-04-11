@@ -95,14 +95,13 @@ public:
     
     // Método chamado pelo Engine quando um frame é recebido
     void receive(const Frame* frame, size_t size) {
-        // Verifica se o frame tem tamanho mínimo válido
-        
         // Converte o tipo de protocolo de network byte order para host byte order
         Protocol_Number protocol = ntohs(frame->type);
         
         // Cria buffer com o frame recebido e notifica os observadores registrados
         Buffer buffer(*frame, size);
 
+        // Notifica o observador do protocolo correspondente
         notify(protocol, &buffer);
         
         // Atualiza estatísticas de recebimento

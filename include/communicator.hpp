@@ -5,25 +5,38 @@
 #include "protocol.hpp"
 
 
-class Communicator : public Concurrent_Observer {
+using Address = Ethernet::Address;
+using Port = Ethernet::Port;
+
+class Communicator {
 public:
-    using Address = Ethernet::Address;
+    Concurrent_Observer observer;
     
 public:
-    Communicator(Protocol* protocol, Address address) : _protocol(protocol), _address(address) {
-        _protocol->attach(this, address);
+    Communicator(Protocol* protocol, std::array<uint8_t, 6> mac_address, Port port) : _protocol(protocol) {
+        // Inicializa o endereço MAC e a porta do comunicador
+        _address.mac_address = mac_address;
+        _address.port = port;
+        // Inicializa o observador com o endereço do comunicador
+        observer.communicator_address.mac_address = mac_address;
+        observer.communicator_address.port = port;
+
+        // Adiciona o observador à lista de observadores do protocolo
+        _protocol->attach(&observer);
     }
 
     ~Communicator() {
-        _protocol->detach(this, _address);
+        _protocol->detach(&observer);
     }
 
-    bool send(const Message* message, Address* destination) {
+    bool send(const Message* message, Address destination) {
         return (_protocol->send(_address, destination, message->data(), message->size()) > 0);
     }
 
     bool receive(Message* message) {
-        Message received_message = updated(); // block until a notification is triggered
+        // Aguarda até que uma mensagem seja recebida
+        // Chama o método updated() do observador para bloquear até receber uma mensagem
+        Message received_message = observer.updated();
         
         // Verifica se a mensagem recebida tem tamanho maior que zero.
         if (received_message.size() == 0) {
@@ -35,13 +48,6 @@ public:
 
         return true;
     }
-
-/*
-private:
-    void update(Protocol obs, int c, Buffer* buf) {
-        Observer::update(c, buf); // releases the thread waiting for data
-    }
-*/
 
 private:
     Protocol* _protocol;

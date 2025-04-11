@@ -4,24 +4,24 @@
 #include <mutex>
 #include <queue>
 #include <semaphore.h>
+#include <array>
 
 #include "message.hpp"
 #include "protocol.hpp"
+#include "ethernet.hpp"
 
 
-// Utiliza o mesmo tipo de protocolo definido na classe Ethernet (uint16_t).
 using Protocol_Number = Ethernet::Protocol_Number;
+using Address = Ethernet::Address;
+
 
 class Concurrent_Observer {
 public:
-    // Porta do observador
-    Protocol_Number port;
+    // Endereço do comunicador que está observando.
+    Address communicator_address;
 public:
-    // Construtor: inicializa a porta e o semáforo
-    Concurrent_Observer(Protocol_Number port) {
-        this->port = port; // Inicializa a porta do observador
-        sem_init(&semaphore, 0, 0); // Inicializa o semáforo com valor 0
-    }
+    // Construtor: inicializa o endereco e o semáforo
+    Concurrent_Observer() {sem_init(&semaphore, 0, 0); } // semáforo inicializado com 0
 
     void update(Message message) {
         mutex.lock();
@@ -71,11 +71,11 @@ class Concurrent_Observed {
         }
 
         // Notifica todos os observadores com o mesmo numero de porta
-        void notify(Protocol_Number port, Message message) {
+        void notify(Address adr, Message message) {
             mutex.lock();
-            for (Concurrent_Observer* observer : observers) {
-                if (observer->port == port) {
-                    observer->update(message); // Atualiza o observador com os dados
+            for (Concurrent_Observer* obs : observers) {
+                if (obs->communicator_address.mac_address == adr.mac_address && obs->communicator_address.port == adr.port) {
+                    obs->update(message); // Atualiza o observador com os dados
                 }
             }
             mutex.unlock();
@@ -90,14 +90,14 @@ class Concurrent_Observed {
 // Instanciado para cada numero de protocolo diferente que deseja-se observar.
 class Conditional_Data_Observer {
     public:
-        // Número de protocolo usado para identificar o tipo de dados que o observador deve processar
+        // Número do protocolo que está observando
         Protocol_Number protocol_number;
+
         Conditional_Data_Observer(Protocol* protocol, Protocol_Number protocol_number): _protocol(protocol), protocol_number(protocol_number) {}
 
-
-        void update(Protocol_Number protocol_number, void* buffer) {
+        void update(void* buffer) {
             // Chama update da classe Protocol para repassar para seu observador.
-            _protocol->update(this, protocol_number, buffer);
+            _protocol->receive(buffer);
         }
 
     private:
@@ -123,7 +123,7 @@ class Conditional_Data_Observed {
             // Percorre a lista de observadores e notifica o que possue o mesmo número de protocolo
             for (Conditional_Data_Observer* data_obs : data_observers) {
                 if (data_obs->protocol_number == protocol_number) {
-                    data_obs->update(protocol_number, buffer); // Atualiza o observador com o endereço do buffer
+                    data_obs->update(buffer); // Atualiza o observador com o endereço do buffer
                 }
             }
         }
