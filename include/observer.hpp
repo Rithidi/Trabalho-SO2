@@ -5,14 +5,20 @@
 #include <queue>
 #include <semaphore.h>
 
+#include "message.hpp"
+#include "protocol.hpp"
+
+
+// Utiliza o mesmo tipo de protocolo definido na classe Ethernet (uint16_t).
+using Protocol_Number = Ethernet::Protocol_Number;
 
 class Concurrent_Observer {
 public:
     // Porta do observador
-    int port;
+    Protocol_Number port;
 public:
     // Construtor: inicializa a porta e o semáforo
-    Concurrent_Observer(int port) {
+    Concurrent_Observer(Protocol_Number port) {
         this->port = port; // Inicializa a porta do observador
         sem_init(&semaphore, 0, 0); // Inicializa o semáforo com valor 0
     }
@@ -65,7 +71,7 @@ class Concurrent_Observed {
         }
 
         // Notifica todos os observadores com o mesmo numero de porta
-        void notify(int port, Message message) {
+        void notify(Protocol_Number port, Message message) {
             mutex.lock();
             for (Concurrent_Observer* observer : observers) {
                 if (observer->port == port) {
@@ -85,11 +91,11 @@ class Concurrent_Observed {
 class Conditional_Data_Observer {
     public:
         // Número de protocolo usado para identificar o tipo de dados que o observador deve processar
-        int protocol_number;
-        Conditional_Data_Observer(Protocol* protocol, int protocol_number): _protocol(protocol), protocol_number(protocol_number) {}
+        Protocol_Number protocol_number;
+        Conditional_Data_Observer(Protocol* protocol, Protocol_Number protocol_number): _protocol(protocol), protocol_number(protocol_number) {}
 
 
-        void update(int protocol_number, void* buffer) {
+        void update(Protocol_Number protocol_number, void* buffer) {
             // Chama update da classe Protocol para repassar para seu observador.
             _protocol->update(this, protocol_number, buffer);
         }
@@ -113,7 +119,7 @@ class Conditional_Data_Observed {
         }
 
         // Notifica todos os observadores com o mesmo numero de protocolo
-        void notify(int protocol_number, void* buffer) {
+        void notify(Protocol_Number protocol_number, void* buffer) {
             // Percorre a lista de observadores e notifica o que possue o mesmo número de protocolo
             for (Conditional_Data_Observer* data_obs : data_observers) {
                 if (data_obs->protocol_number == protocol_number) {

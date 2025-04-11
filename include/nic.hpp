@@ -7,6 +7,7 @@
 #include <vector>
 #include <arpa/inet.h>
 
+
 // NIC (Network Interface Card) - Classe que representa uma interface de rede
 // Template Engine: permite usar diferentes implementações de mecanismos de rede
 template <typename Engine>
@@ -96,13 +97,13 @@ public:
     void receive(const Frame* frame, size_t size) {
         // Verifica se o frame tem tamanho mínimo válido
         
-        
         // Converte o tipo de protocolo de network byte order para host byte order
         Protocol_Number protocol = ntohs(frame->type);
         
         // Cria buffer com o frame recebido e notifica os observadores registrados
         Buffer buffer(*frame, size);
-        //notify(protocol, &buffer);
+
+        notify(protocol, &buffer);
         
         // Atualiza estatísticas de recebimento
         stats.rx_packets++;

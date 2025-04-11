@@ -7,9 +7,8 @@
 
 class Communicator : public Concurrent_Observer {
 public:
-    using Buffer = Protocol::Buffer;
-    using Address = Protocol::Address;
-
+    using Address = Ethernet::Address;
+    
 public:
     Communicator(Protocol* protocol, Address address) : _protocol(protocol), _address(address) {
         _protocol->attach(this, address);
@@ -19,8 +18,8 @@ public:
         _protocol->detach(this, _address);
     }
 
-    bool send(const Message* message) {
-        return (_protocol->send(_address, Protocol::Address::BROADCAST, message->data(), message->size()) > 0);
+    bool send(const Message* message, Address* destination) {
+        return (_protocol->send(_address, destination, message->data(), message->size()) > 0);
     }
 
     bool receive(Message* message) {
@@ -35,15 +34,6 @@ public:
         message->setData(received_message.data(), received_message.size());
 
         return true;
-
-        /*
-        Protocol::Address from;
-        int size = _protocol->receive(buf, &from, message->data(), message->size());
-        if (size > 0) {
-            return true;
-        }
-        return false;
-        */
     }
 
 /*

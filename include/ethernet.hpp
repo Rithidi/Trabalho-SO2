@@ -12,11 +12,22 @@
 class Ethernet {
 public:
     // Define o tipo para endereços MAC (6 bytes)
-    using Address = std::array<uint8_t, 6>;
+    //using Address = std::array<uint8_t, 6>;
 
     // Define o tipo para números de protocolo (16 bits)
     using Protocol_Number = uint16_t;
+    typedef unsigned short Port;
 
+    struct Address {
+        std::array<uint8_t, 6> mac_address; // Endereço MAC
+        Port port; // Porta de origem
+    };
+  
+    struct Header {
+        Address src_address; // Endereço de origem
+        Address dst_address; // Endereço de destino
+    };
+  
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)
     static constexpr size_t HEADER_SIZE = 14; // 6(dst) + 6(src) + 2(type)
     
@@ -33,6 +44,11 @@ public:
         Address dst = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Endereço MAC de destino (sempre broadcast)
         Address src;                                        // Endereço MAC de origem
         Protocol_Number type = 0x88B5;                     // Tipo do protocolo (customizado para o projeto)
+        
+        // Cabeçalho do protocolo
+        Header header;
+        //
+
         uint8_t payload[MAX_PAYLOAD];                      // Dados transmitidos
         
         /**
