@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <array>
+#include <cstddef>
 
 /**
  * @brief Classe que representa o protocolo Ethernet simplificado para comunicação por broadcast
@@ -10,6 +11,12 @@
  */
 class Ethernet {
 public:
+    // Define o tipo para endereços MAC (6 bytes)
+    using Address = std::array<uint8_t, 6>;
+
+    // Define o tipo para números de protocolo (16 bits)
+    using Protocol_Number = uint16_t;
+
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)
     static constexpr size_t HEADER_SIZE = 14; // 6(dst) + 6(src) + 2(type)
     
@@ -23,10 +30,10 @@ public:
      * com alinhamento de bytes compactado (sem padding)
      */
     struct Frame {
-        std::array<uint8_t, 6> dst = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Endereço MAC de destino (sempre broadcast)
-        std::array<uint8_t, 6> src;                                        // Endereço MAC de origem
-        uint16_t type = 0x88B5;                                            // Tipo do protocolo (customizado para o projeto)
-        uint8_t payload[MAX_PAYLOAD];                                      // Dados transmitidos
+        Address dst = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Endereço MAC de destino (sempre broadcast)
+        Address src;                                        // Endereço MAC de origem
+        Protocol_Number type = 0x88B5;                     // Tipo do protocolo (customizado para o projeto)
+        uint8_t payload[MAX_PAYLOAD];                      // Dados transmitidos
         
         /**
          * @brief Retorna o tamanho máximo útil do payload (MTU)

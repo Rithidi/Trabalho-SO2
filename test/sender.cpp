@@ -1,32 +1,59 @@
-#include "Engine.hpp"
+#include "nic.hpp"
 #include <iostream>
 #include <cstring>
-#include <unistd.h>
-#include <net/ethernet.h>
-#include <netinet/if_ether.h>
-#include <linux/if_packet.h>
+#include <arpa/inet.h>
 
 int main() {
-    const std::string interface = "enp7s0"; // Substitua pela interface correta
-    Engine engine(interface, nullptr);  // Sem callback, pois apenas envia
+    // Inicializa a NIC com o mecanismo de rede (Engine) e a interface de rede "eth0"
+    NIC<Engine> nic("enp7s0");
 
-    // Criando um frame Ethernet de broadcast
-    constexpr size_t FRAME_SIZE = 64;
-    unsigned char frame[FRAME_SIZE] = {0};
+    // Configura o endereço MAC da interface (opcional, se necessário)
+    NIC<Engine>::Address mac_address = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+    nic.set_address(mac_address);
 
-    // Configurar endereço de destino (broadcast)
-    std::memset(frame, 0xFF, 6); // MAC de broadcast FF:FF:FF:FF:FF:FF
-    std::memset(frame + 6, 0x11, 6); // MAC de origem (fictício)
-    frame[12] = 0x08;  // Tipo Ethernet (0x0800 = IPv4)
-    frame[13] = 0x00;
+    // Tamanho do payload
+    constexpr size_t PAYLOAD_SIZE = 64;
 
-    // Dados do frame
-    const char* msg = "Hello Ethernet Broadcast!";
-    std::memcpy(frame + 14, msg, std::min(strlen(msg), FRAME_SIZE - 14));
+    // Número de mensagens a serem enviadas
+    constexpr int NUM_MESSAGES = 1020;
 
-    std::cout << "Enviando frame de broadcast...\n";
-    engine.send(frame, FRAME_SIZE);
-    std::cout << "Frame enviado!\n";
+    for (int i = 0; i < NUM_MESSAGES; ++i) {
+        // Aloca um buffer para o frame Ethernet
+        auto* buffer = nic.alloc({}, 0x0800, PAYLOAD_SIZE);  // Protocolo IPv4 (0x0800)
+        if (!buffer) {
+            std::cerr << "Erro ao alocar o buffer!" << std::endl;
+            return -1;
+        }
+
+        // Preenche o payload com a mensagem
+        const char* msg = "Hello Ethernet Broadcast!";
+        std::memcpy(buffer->frame.payload, msg, std::min(strlen(msg), PAYLOAD_SIZE));
+        buffer->size = std::min(strlen(msg), PAYLOAD_SIZE);
+
+        // Configura o endereço MAC de destino (broadcast)
+        buffer->frame.dst = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+        // Configura o endereço MAC de origem
+        buffer->frame.src = mac_address;
+
+        // Configura o tipo do protocolo (IPv4)
+        buffer->frame.type = htons(0x88B5);
+
+        // Envia o frame
+        int result = nic.send(buffer);
+
+        if (result > 0) {
+            std::cout << "Frame " << i + 1 << " enviado com sucesso!" << std::endl;
+        } else {
+            std::cerr << "Erro ao enviar o frame " << i + 1 << "!" << std::endl;
+        }
+
+        // Libera o buffer alocado
+        delete buffer;
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    std::cout << "Enviados " << NUM_MESSAGES << " frames de broadcast." << std::endl;
 
     return 0;
 }
