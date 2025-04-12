@@ -8,7 +8,7 @@ int main() {
     NIC<Engine> nic("enp7s0");
 
     // Configura o endereço MAC da interface (opcional, se necessário)
-    NIC<Engine>::Address mac_address = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+    NIC<Engine>::Mac_Address mac_address = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     nic.set_address(mac_address);
 
     // Tamanho do payload

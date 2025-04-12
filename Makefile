@@ -1,38 +1,28 @@
-# Makefile para o projeto de comunicação entre veículos autônomos
+# Compilador
+CXX := g++
 
-# Compilador e flags
-CXX = g++
-CXXFLAGS = -std=c++17 -pthread -Wall -Wextra -Iinclude/
-LDFLAGS = -pthread
+# Flags de compilação
+CXXFLAGS := -std=c++17 -pthread -I./include
+LDFLAGS := -pthread
 
 # Diretórios
-SRC_DIR = src
-OBJ_DIR = obj
-INCLUDE_DIR = include
+SRC_DIR := ./src
+INC_DIR := ./include
+TARGET := main.exe
 
-# Arquivo principal
-MAIN_SRC = $(SRC_DIR)/main.cpp
-MAIN_OBJ = $(OBJ_DIR)/main.o
-MAIN_EXE = $(SRC_DIR)/main.exe  # Executável no mesmo diretório do fonte
+# Lista todos os arquivos .cpp
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 
-# Regra padrão (compila apenas o main.exe)
-all: $(MAIN_EXE)
+# Regra principal: compila diretamente para o executável
+$(TARGET): $(SRCS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	@echo "Executável criado: $(TARGET)"
 
-# Compila o executável principal (sempre recompila o main.cpp)
-$(MAIN_EXE): $(MAIN_SRC) | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -c $(MAIN_SRC) -o $(MAIN_OBJ)
-	$(CXX) $(LDFLAGS) $(MAIN_OBJ) -o $@
-
-# Cria o diretório de objetos se não existir
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
-
-# Limpeza (remove objetos e executável)
+# Limpeza
 clean:
-	rm -rf $(OBJ_DIR) $(MAIN_EXE)
+	rm -f $(TARGET)
+	@echo "Executável removido"
 
-# Executa o programa
-run: all
-	./$(MAIN_EXE)
+.PHONY: all clean
 
-.PHONY: all clean run
+all: $(TARGET)
