@@ -11,10 +11,10 @@
 // NIC (Network Interface Card) - Classe que representa uma interface de rede
 // Template Engine: permite usar diferentes implementações de mecanismos de rede
 template <typename Engine>
-class NIC : public Ethernet, public Conditional_Data_Observed {
+class NIC : public Ethernet {
 public:
     typedef Ethernet::Frame Frame;               // Tipo para frames Ethernet
-    typedef Ethernet::Address Address;           // Tipo para endereços MAC
+    typedef Ethernet::Mac_Address Mac_Address;           // Tipo para endereços MAC
     typedef Ethernet::Protocol_Number Protocol_Number;  // Tipo para números de protocolo
     
     // Buffer para armazenar frames Ethernet recebidos
@@ -52,12 +52,12 @@ public:
     ~NIC() = default; // O std::unique_ptr cuida da destruição da Engine
     
     // Configura o endereço MAC da interface
-    void set_address(const Address& addr) {
+    void set_address(const Mac_Address& addr) {
         mac_address = addr;
     }
     
     // Retorna o endereço MAC atual da interface
-    const Address& get_address() const {
+    const Mac_Address& get_address() const {
         return mac_address;
     }
     
@@ -102,7 +102,7 @@ public:
         Buffer buffer(*frame, size);
 
         // Notifica o observador do protocolo correspondente
-        notify(protocol, &buffer);
+        _observed.notify(protocol, &buffer);
         
         // Atualiza estatísticas de recebimento
         stats.rx_packets++;
@@ -115,9 +115,18 @@ public:
     }
 
     void free(Buffer * buf);
+
+    void attach(Conditional_Data_Observer* obs) {
+        _observed.attach(obs);
+    }
+
+    void detach(Conditional_Data_Observer* obs) {
+        _observed.detach(obs);
+    }
     
 private:
     std::unique_ptr<Engine> engine;  // Mecanismo de rede específico (depende do template)
-    Address mac_address;             // Endereço MAC da interface
+    Mac_Address mac_address;             // Endereço MAC da interface
     Statistics stats;                // Estatísticas de tráfego
+    Conditional_Data_Observed _observed;
 };

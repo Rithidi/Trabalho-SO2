@@ -90,12 +90,14 @@ class Concurrent_Observed {
 // Instanciado para cada numero de protocolo diferente que deseja-se observar.
 class Conditional_Data_Observer {
     public:
+        typedef NIC<Engine>::Buffer Buffer;
+
         // Número do protocolo que está observando
         Protocol_Number protocol_number;
 
         Conditional_Data_Observer(Protocol* protocol, Protocol_Number protocol_number): _protocol(protocol), protocol_number(protocol_number) {}
 
-        void update(void* buffer) {
+        void update(Buffer* buffer) {
             // Chama update da classe Protocol para repassar para seu observador.
             _protocol->receive(buffer);
         }
@@ -108,6 +110,8 @@ class Conditional_Data_Observer {
 // Uma instancia para comunicar Conditional_Data_Observers quando um frame de um respectivo  num de protocolo é recebido.
 class Conditional_Data_Observed {
     public:
+        typedef NIC<Engine>::Buffer Buffer;
+
         // Adiciona um observador à lista de observadores
         void attach(Conditional_Data_Observer* obs) {
             data_observers.emplace_back(obs); // Adiciona o observador na lista
@@ -119,7 +123,7 @@ class Conditional_Data_Observed {
         }
 
         // Notifica todos os observadores com o mesmo numero de protocolo
-        void notify(Protocol_Number protocol_number, void* buffer) {
+        void notify(Protocol_Number protocol_number, Buffer* buffer) {
             // Percorre a lista de observadores e notifica o que possue o mesmo número de protocolo
             for (Conditional_Data_Observer* data_obs : data_observers) {
                 if (data_obs->protocol_number == protocol_number) {

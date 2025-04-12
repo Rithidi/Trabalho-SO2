@@ -16,10 +16,11 @@ public:
 
     // Define o tipo para números de protocolo (16 bits)
     using Protocol_Number = uint16_t;
+    using Mac_Address = std::array<uint8_t, 6>;
     typedef unsigned short Port;
 
     struct Address {
-        std::array<uint8_t, 6> mac_address; // Endereço MAC
+        Mac_Address mac_address; // Endereço MAC
         Port port; // Porta de origem
     };
   
@@ -41,8 +42,8 @@ public:
      * com alinhamento de bytes compactado (sem padding)
      */
     struct Frame {
-        Address dst = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Endereço MAC de destino (sempre broadcast)
-        Address src;                                        // Endereço MAC de origem
+        Mac_Address dst = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Endereço MAC de destino (sempre broadcast)
+        Mac_Address src;                                        // Endereço MAC de origem
         Protocol_Number type = 0x88B5;                     // Tipo do protocolo (customizado para o projeto)
         
         // Cabeçalho do protocolo
