@@ -3,53 +3,27 @@
 #include "message.hpp"
 #include "observer.hpp"
 #include "protocol.hpp"
-
+#include <array>
 
 using Address = Ethernet::Address;
 using Port = Ethernet::Port;
 
 class Communicator {
 public:
-    Concurrent_Observer observer;
-    
-public:
-    Communicator(Protocol* protocol, std::array<uint8_t, 6> mac_address, Port port) : _protocol(protocol) {
-        // Inicializa o endereço MAC e a porta do comunicador
-        _address.mac_address = mac_address;
-        _address.port = port;
-        // Inicializa o observador com o endereço do comunicador
-        observer.communicator_address.mac_address = mac_address;
-        observer.communicator_address.port = port;
+    // Construtor: inicializa o comunicador com o protocolo, endereço MAC e porta
+    Communicator(Protocol* protocol, std::array<uint8_t, 6> mac_address, Port port);
 
-        // Adiciona o observador à lista de observadores do protocolo
-        _protocol->attach(&observer);
-    }
+    // Destrutor: desanexa o observador do protocolo
+    ~Communicator();
 
-    ~Communicator() {
-        _protocol->detach(&observer);
-    }
+    // Envia uma mensagem para o destino especificado
+    bool send(const Message* message, Address destination);
 
-    bool send(const Message* message, Address destination) {
-        return (_protocol->send(_address, destination, message->data(), message->size()) > 0);
-    }
-
-    bool receive(Message* message) {
-        // Aguarda até que uma mensagem seja recebida
-        // Chama o método updated() do observador para bloquear até receber uma mensagem
-        Message received_message = observer.updated();
-        
-        // Verifica se a mensagem recebida tem tamanho maior que zero.
-        if (received_message.size() == 0) {
-            return false;
-        } 
-
-        // Copia conteudo da mensagem recebida para a mensagem do comunicador.
-        message->setData(received_message.data(), received_message.size());
-
-        return true;
-    }
+    // Recebe uma mensagem e coloca no parâmetro message
+    bool receive(Message* message);
 
 private:
-    Protocol* _protocol;
-    Address _address;
+    Protocol* _protocol;  // Ponteiro para o protocolo utilizado
+    Address _address;     // Endereço (MAC e Porta) do comunicador
+    Concurrent_Observer observer;  // Observador para receber as mensagens
 };
