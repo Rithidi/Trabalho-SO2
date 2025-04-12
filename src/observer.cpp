@@ -51,7 +51,7 @@ void Concurrent_Observed::notify(Address adr, Message message) {
 Conditional_Data_Observer::Conditional_Data_Observer(Protocol* protocol, Protocol_Number protocol_number)
     : _protocol(protocol), protocol_number(protocol_number) {}
 
-void Conditional_Data_Observer::update(Buffer* buffer) {
+void Conditional_Data_Observer::update(void* buffer) {
     _protocol->receive(buffer);  // Chama update da classe Protocol para processar pacote recebido.
 }
 
@@ -63,7 +63,7 @@ void Conditional_Data_Observed::detach(Conditional_Data_Observer* obs) {
     data_observers.remove(obs);  // Remove o observador da lista
 }
 
-void Conditional_Data_Observed::notify(Protocol_Number protocol_number, Buffer* buffer) {
+void Conditional_Data_Observed::notify(Protocol_Number protocol_number, void* buffer) {
     for (Conditional_Data_Observer* data_obs : data_observers) {
         if (data_obs->protocol_number == protocol_number) {
             data_obs->update(buffer);  // Atualiza o observador com o endereço do buffer

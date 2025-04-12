@@ -20,7 +20,7 @@ public:
     ~Protocol();
 
     int send(Address from, Address to, const void* data, unsigned int size);
-    void receive(Buffer* buf);
+    void receive(void* buf);
     void attach(Concurrent_Observer* obs);
     void detach(Concurrent_Observer* obs);
 

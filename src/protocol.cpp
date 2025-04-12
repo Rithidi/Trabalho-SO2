@@ -28,22 +28,25 @@ int Protocol::send(Address from, Address to, const void* data, unsigned int size
     return _nic->send(buf);
 }
 
-void Protocol::receive(Buffer* buf) {
+void Protocol::receive(void* buf) {
+    // Conversão direta de void* para Buffer*
+    Buffer* buffer = static_cast<Buffer*>(buf);
+
     // Endereco de destino do frame recebido
-    Address dst = buf->frame.header.dst_address;
+    Address dst = buffer->frame.header.dst_address;
     // Endereco de origem do frame recebido
-    Address src = buf->frame.header.src_address;
+    Address src = buffer->frame.header.src_address;
 
     // Tamanho do payload recebido
-    unsigned int payload_size = buf->size - sizeof(Ethernet::Header) - 14;
+    unsigned int payload_size = buffer->size - sizeof(Ethernet::Header) - 14;
     
     Message message;
-    message.setData(buf->frame.payload, payload_size);
+    message.setData(buffer->frame.payload, payload_size);
 
     _observed.notify(dst, message);
 
     // Libera o buffer alocado para o frame
-    _nic->free(buf);
+    _nic->free(buffer);
 }
 
 void Protocol::attach(Concurrent_Observer* obs) {

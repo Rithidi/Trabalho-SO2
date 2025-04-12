@@ -7,8 +7,12 @@
 #include <array>
 
 #include "message.hpp"
-#include "protocol.hpp"
+//#include "protocol.hpp"
 #include "ethernet.hpp"
+
+// Forward declarations
+template<typename> class NIC;
+class Protocol;
 
 using Protocol_Number = Ethernet::Protocol_Number;
 using Address = Ethernet::Address;
@@ -42,13 +46,13 @@ private:
 
 class Conditional_Data_Observer {
 public:
-    typedef NIC<Engine>::Buffer Buffer;
+    //typedef NIC<Engine>::Buffer Buffer;
 
     Protocol_Number protocol_number;
 
     Conditional_Data_Observer(Protocol* protocol, Protocol_Number protocol_number);
 
-    void update(Buffer* buffer);
+    void update(void* buffer);
 
 private:
     Protocol* _protocol;
@@ -56,11 +60,11 @@ private:
 
 class Conditional_Data_Observed {
 public:
-    typedef NIC<Engine>::Buffer Buffer;
+    //typedef NIC<Engine>::Buffer Buffer;
 
     void attach(Conditional_Data_Observer* obs);
     void detach(Conditional_Data_Observer* obs);
-    void notify(Protocol_Number protocol_number, Buffer* buffer);
+    void notify(Protocol_Number protocol_number, void* buffer);
 
 private:
     std::list<Conditional_Data_Observer*> data_observers;
