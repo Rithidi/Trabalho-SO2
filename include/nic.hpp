@@ -11,7 +11,7 @@
 // NIC (Network Interface Card) - Classe que representa uma interface de rede
 // Template Engine: permite usar diferentes implementações de mecanismos de rede
 template <typename Engine>
-class NIC : public Ethernet {
+class NIC : public Ethernet, public Conditional_Data_Observed {
 public:
     typedef Ethernet::Frame Frame;               // Tipo para frames Ethernet
     typedef Ethernet::Address Address;           // Tipo para endereços MAC
@@ -113,6 +113,8 @@ public:
     const Statistics& get_statistics() const {
         return stats;
     }
+
+    void free(Buffer * buf);
     
 private:
     std::unique_ptr<Engine> engine;  // Mecanismo de rede específico (depende do template)
