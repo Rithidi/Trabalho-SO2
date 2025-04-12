@@ -1,4 +1,5 @@
 #include "../include/observer.hpp"
+#include "../include/protocol.hpp"
 
 
 Concurrent_Observer::Concurrent_Observer() {
