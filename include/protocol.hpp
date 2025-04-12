@@ -14,19 +14,21 @@ using Address = Ethernet::Address;
 class Protocol : public Concurrent_Observed {
    public:
 
-   typedef NIC::Buffer Buffer;
+   typedef NIC<Engine>::Buffer Buffer;
 
    Protocol_Number protocol_number;
 
-      Protocol(NIC* nic, Protocol_Number protocol_number) : _nic(nic), protocol_number(protocol_number) {
+      Protocol(NIC<Engine>* nic, Protocol_Number protocol_number) 
+         : _nic(nic),
+         protocol_number(protocol_number),
          // Inicializa o observador com o número do protocolo
-         _data_observed.protocol_number = protocol_number;
-
-         _nic->attach(_data_observed, protocol_number);
+         _data_observer(this, protocol_number)
+      {
+         _nic->attach(&_data_observer);
       };
 
       ~Protocol() {
-         _nic->detach(_data_observed, this->protocol_number);
+         _nic->detach(&_data_observer);
       };
 
    public:
@@ -67,6 +69,6 @@ class Protocol : public Concurrent_Observed {
       }
   
    private:
-      NIC* _nic;
-      Conditional_Data_Observer _data_observed;
+      NIC<Engine>* _nic;
+      Conditional_Data_Observer _data_observer;
 };
