@@ -32,7 +32,7 @@ void enviar_mensagem() {
 
     int contador = 1;
 
-    while (contador < 10001) { // Enviar 5 mensagens para teste
+    while (contador < 1001) { // Enviar 5 mensagens para teste
         Message msg;
         string dados = "Mensagem " + to_string(contador);
         msg.setData(dados.c_str(), dados.size() + 1);
@@ -50,7 +50,7 @@ void enviar_mensagem() {
         } else {
             cerr << "Falha no envio do sensor" << endl;
         }
-        this_thread::sleep_for(0.0001s); // Espera 1 segundo entre os envios
+        //this_thread::sleep_for(0.0001s); // Espera 1 segundo entre os envios
     }
 }
 
@@ -62,7 +62,7 @@ void receber_mensagem() {
     Protocol protocol_b(&nic_b, 0x88B5);
     Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
 
-    for (int i = 0; i < 10000; ++i) { // Esperar 5 mensagens para teste
+    for (int i = 0; i < 1000; ++i) { // Esperar 5 mensagens para teste
         Message msg;
 
         if (controle.receive(&msg)) {
