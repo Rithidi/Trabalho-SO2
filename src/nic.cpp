@@ -2,6 +2,8 @@
 #include "../include/ethernet.hpp"
 #include "../include/observer.hpp"
 
+#include <iostream>
+
 
 typedef Ethernet::Mac_Address Mac_Address;
 
@@ -55,40 +57,37 @@ typename NIC<Engine>::Buffer* NIC<Engine>::alloc(Address dst, Protocol_Number pr
     return buffer;  // Retorna o ponteiro para o buffer alocado
 }
 
-// Envia um frame Ethernet para o destino especificado
 template <typename Engine>
 int NIC<Engine>::send(Buffer* buf) {
-    if (buf->size > 1500) return -1;  // Verifica se o tamanho do frame no buffer excede 1500
+    Ethernet::Frame* frame = &buf->frame;
 
-    // Envia o frame diretamente do buffer
-    int result = engine->send(&buf->frame, sizeof(buf->frame));
+    // Corrige o tamanho real da estrutura Frame
+    std::cout << "NIC enviando frame para engine. protocolo: " << frame->type << " tamanho frame: " << sizeof(*frame) << std::endl;
 
-    // Atualiza estatísticas
-    if (result > 0) {
-        stats.tx_packets++;       // Incrementa contador de pacotes enviados
-        stats.tx_bytes += result; // Adiciona bytes enviados
-    } else {
-        stats.errors++;           // Incrementa contador de erros
-    }
+    // Verifica se o tamanho do buffer não excede 1500 bytes (tamanho máximo permitido para Ethernet)
+    if (buf->size > 1500) return -1;
+
+    // Envia o frame diretamente do buffer para o engine
+    int result = engine->send(frame, sizeof(*frame));  // Usa sizeof(*frame) para obter o tamanho real da estrutura
 
     return result;
 }
 
+
 // Método chamado pelo Engine quando um frame é recebido
 template <typename Engine>
 void NIC<Engine>::receive(const Frame* frame, size_t size) {
-    // Converte o tipo de protocolo de network byte order para host byte order
-    Protocol_Number protocol = ntohs(frame->type);
+
+    std::cout << "NIC recebeu frame da engine. protocolo: " << ntohs(frame->type) << " tamanho frame: " << sizeof(*frame) << std::endl;
 
     // Cria buffer com o frame recebido e notifica os observadores registrados
     Buffer buffer(*frame, size);
 
+    // Pega protocolo correspondente ao frame recebido
+    Ethernet::Protocol_Number protocol = ntohs(frame->type);
+
     // Notifica o observador do protocolo correspondente
     observed.notify(protocol, &buffer);
-
-    // Atualiza estatísticas de recebimento
-    stats.rx_packets++;
-    stats.rx_bytes += size;
 }
 
 // Retorna as estatísticas atuais da interface

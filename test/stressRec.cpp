@@ -1,4 +1,4 @@
-#include "engine.hpp"
+#include "engine.cpp"
 #include <iostream>
 #include <csignal>
 #include <atomic>
@@ -19,7 +19,7 @@ void count_and_display_frame(const void* /*data*/, size_t /*size*/) {
 }
 
 int main() {
-    std::string interface = "enp7s0"; // Altere para a interface desejada
+    std::string interface = "enp6s0"; // Altere para a interface desejada
 
     // Passa o callback para a Engine
     Engine engine(interface, count_and_display_frame, true);

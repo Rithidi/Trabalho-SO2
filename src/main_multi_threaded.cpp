@@ -1,10 +1,7 @@
 #include <iostream>
+#include <thread>
 #include <chrono>
 #include <memory>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <fcntl.h>
 #include "../include/communicator.hpp"
 #include "../include/message.hpp"
 #include "../include/nic.hpp"
@@ -23,19 +20,12 @@ const Ethernet::Port PORTA_SENSOR = 5000;
 const Ethernet::Port PORTA_CONTROLE = 5001;
 
 // Função que simula o envio de mensagens pelo sensor
-void enviar_mensagem() {
-    // Criar NICs e protocolos para os veículos
-    NIC<Engine> nic_a("eno1");
-    nic_a.set_address(MAC_VEICULO_A);
-    Protocol protocol_a(&nic_a, 0x88B5);
-    Communicator sensor(&protocol_a, MAC_VEICULO_A, PORTA_SENSOR);
-
-
+void enviar_mensagem(Communicator* sensor) {
     int contador = 1;
 
     while (contador < 6) { // Enviar 5 mensagens para teste
         Message msg;
-        string dados = "Mensagem " + to_string(contador);
+        string dados = " Mensagem " + to_string(contador);
         msg.setData(dados.c_str(), dados.size() + 1);
 
         contador++;
@@ -44,10 +34,9 @@ void enviar_mensagem() {
         Ethernet::Address destino = {MAC_VEICULO_B, PORTA_CONTROLE};
 
         // Enviar mensagem
-        if (sensor.send(&msg, destino)) {
+        if (sensor->send(&msg, destino)) {
             cout << "Sensor (veiculo 1)" << " enviou: " << dados << endl;
-
-            // Envia a confirmação para o processo filho via pipe
+            this_thread::sleep_for(500ms);
         } else {
             cerr << "Falha no envio do sensor" << endl;
         }
@@ -55,17 +44,11 @@ void enviar_mensagem() {
 }
 
 // Função que simula o recebimento de mensagens pelo controle
-void receber_mensagem() {
-    // Criar NICs e protocolos para os veículos
-    NIC<Engine> nic_b("eno1");
-    nic_b.set_address(MAC_VEICULO_B);
-    Protocol protocol_b(&nic_b, 0x88B5);
-    Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
-
+void receber_mensagem(Communicator* controle) {
     for (int i = 0; i < 5; ++i) { // Esperar 5 mensagens para teste
         Message msg;
 
-        if (controle.receive(&msg)) {
+        if (controle->receive(&msg)) {
             string mensagem(reinterpret_cast<const char*>(msg.data()));
             cout << "Controle (veiculo 2)" << " recebeu: " << mensagem << endl;
         } else {
@@ -75,25 +58,28 @@ void receber_mensagem() {
 }
 
 int main() {
-    cout << "Teste simplificado de comunicacao entre veiculos (processos distintos)" << endl;
-    pid_t pid = fork(); // Cria o processo filho
+    cout << "Teste simplificado de comunicacao entre veiculos (threads no mesmo processo)" << endl;
 
-    if (pid == -1) {
-        cerr << "Erro ao criar o processo" << endl;
-        return 1;
-    }
+    // Criar NICs e protocolos para os veículos
+    NIC<Engine> nic_a("eno1");
+    nic_a.set_address(MAC_VEICULO_A);
+    Protocol protocol_a(&nic_a, 0x88B5);
+    Communicator sensor(&protocol_a, MAC_VEICULO_A, PORTA_SENSOR);
 
-    if (pid > 0) {
-        // Processo pai - Enviar mensagens
-        enviar_mensagem();
-        wait(NULL); // Espera o processo filho terminar
-        cout << "Processo enviar terminou." << endl;
-    } else {
-        // Processo filho - Receber mensagens
-        receber_mensagem();
-        cout << "Processo receber terminou." << endl;
-    }
+    NIC<Engine> nic_b("eno1");
+    nic_b.set_address(MAC_VEICULO_B);
+    Protocol protocol_b(&nic_b, 0x88B5);
+    Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
+
+    // Criar threads para enviar e receber mensagens
+    thread thread_sensor(enviar_mensagem, &sensor);
+    thread thread_controle(receber_mensagem, &controle);
+
+    // Esperar as threads terminarem
+    thread_sensor.join();
+    thread_controle.join();
 
     cout << "Teste finalizado." << endl;
     return 0;
 }
+

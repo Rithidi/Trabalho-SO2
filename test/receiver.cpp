@@ -1,4 +1,4 @@
-#include "engine.hpp"
+#include "engine.cpp"
 #include <iostream>
 #include <iomanip>
 #include <csignal>
@@ -7,7 +7,11 @@
 
 void print_frame(const void* data, size_t size) {
     const uint8_t* bytes = static_cast<const uint8_t*>(data);
-    std::cout << "[Frame received] Size: " << size << " bytes\n";
+    // Extrai o protocolo (type) que está logo após os endereços MAC
+    uint16_t protocol = (bytes[12] << 8) | bytes[13];
+
+    std::cout << "[Frame received] Protocol: 0x" << std::hex << protocol << " Size: " << std::dec << size << " bytes\n";
+
     for (size_t i = 0; i < size; ++i) {
         std::cout << std::hex << std::setw(2) << std::setfill('0')
                   << static_cast<int>(bytes[i]) << " ";
@@ -17,8 +21,9 @@ void print_frame(const void* data, size_t size) {
     std::cout << std::dec << "\n\n";
 }
 
+
 int main() {
-    std::string interface = "enp7s0"; // Change this
+    std::string interface = "enp6s0"; // Change this
 
     // Pass the callback to Engine
     Engine engine(interface, print_frame, true);
@@ -38,4 +43,6 @@ int main() {
 
     return 0;
 }
+
+
 

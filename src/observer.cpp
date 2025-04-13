@@ -2,6 +2,9 @@
 #include "../include/protocol.hpp"
 
 
+#include <iostream>
+
+
 Concurrent_Observer::Concurrent_Observer() {
     sem_init(&semaphore, 0, 0);  // Inicializa o semáforo com 0
 }
@@ -16,8 +19,13 @@ void Concurrent_Observer::update(Message message) {
 }
 
 Message Concurrent_Observer::updated() {
+
+    std::cout << "Communicador esperando por mensagem zzz" << std::endl;
+
     // Espera até que novos dados estejam disponíveis
     sem_wait(&semaphore);
+
+    std::cout << "Communicador recebeu mensagem !!!" << std::endl;
 
     mutex.lock();
     Message message = _message_buffer.front();

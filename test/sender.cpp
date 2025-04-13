@@ -5,7 +5,7 @@
 
 int main() {
     // Inicializa a NIC com o mecanismo de rede (Engine) e a interface de rede "eth0"
-    NIC<Engine> nic("enp7s0");
+    NIC<Engine> nic("enp6s0");
 
     // Configura o endereço MAC da interface (opcional, se necessário)
     NIC<Engine>::Mac_Address mac_address = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
@@ -15,7 +15,7 @@ int main() {
     constexpr size_t PAYLOAD_SIZE = 64;
 
     // Número de mensagens a serem enviadas
-    constexpr int NUM_MESSAGES = 1020;
+    constexpr int NUM_MESSAGES = 1;
 
     for (int i = 0; i < NUM_MESSAGES; ++i) {
         // Aloca um buffer para o frame Ethernet

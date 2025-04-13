@@ -1,4 +1,4 @@
-#include "engine.hpp"
+#include "../include/engine.hpp"
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
@@ -65,8 +65,12 @@ Engine::~Engine() {
     }
 }
 
+
 // Método para enviar um quadro Ethernet
 int Engine::send(const void* data, size_t size) {
+
+    //std::cout << *data << std::endl;
+
     struct sockaddr_ll dest_addr {};
     struct ifreq ifr {};
     std::strncpy(ifr.ifr_name, _interface.c_str(), IFNAMSIZ - 1);
