@@ -30,10 +30,9 @@ void enviar_mensagem() {
     Protocol protocol_a(&nic_a, 0x88B5);
     Communicator sensor(&protocol_a, MAC_VEICULO_A, PORTA_SENSOR);
 
-
     int contador = 1;
 
-    while (contador < 6) { // Enviar 5 mensagens para teste
+    while (contador < 11) { // Enviar 5 mensagens para teste
         Message msg;
         string dados = "Mensagem " + to_string(contador);
         msg.setData(dados.c_str(), dados.size() + 1);
@@ -51,6 +50,7 @@ void enviar_mensagem() {
         } else {
             cerr << "Falha no envio do sensor" << endl;
         }
+        this_thread::sleep_for(0.1s); // Espera 1 segundo entre os envios
     }
 }
 
@@ -62,7 +62,7 @@ void receber_mensagem() {
     Protocol protocol_b(&nic_b, 0x88B5);
     Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
 
-    for (int i = 0; i < 5; ++i) { // Esperar 5 mensagens para teste
+    for (int i = 0; i < 10; ++i) { // Esperar 5 mensagens para teste
         Message msg;
 
         if (controle.receive(&msg)) {
@@ -75,7 +75,7 @@ void receber_mensagem() {
 }
 
 int main() {
-    cout << "Teste simplificado de comunicacao entre veiculos (processos distintos)" << endl;
+    cout << "TESTE: Comunicacao entre componentes de veiculos diferentes (processos distintos)" << endl;
     pid_t pid = fork(); // Cria o processo filho
 
     if (pid == -1) {

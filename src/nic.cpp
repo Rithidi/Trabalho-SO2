@@ -62,7 +62,7 @@ int NIC<Engine>::send(Buffer* buf) {
     Ethernet::Frame* frame = &buf->frame;
 
     // Corrige o tamanho real da estrutura Frame
-    std::cout << "NIC enviando frame para engine. protocolo: " << frame->type << " tamanho frame: " << sizeof(*frame) << std::endl;
+    //std::cout << "NIC enviando frame para engine. protocolo: " << frame->type << " tamanho frame: " << sizeof(*frame) << std::endl;
 
     // Verifica se o tamanho do buffer não excede 1500 bytes (tamanho máximo permitido para Ethernet)
     if (buf->size > 1500) return -1;
@@ -78,7 +78,7 @@ int NIC<Engine>::send(Buffer* buf) {
 template <typename Engine>
 void NIC<Engine>::receive(const Frame* frame, size_t size) {
 
-    std::cout << "NIC recebeu frame da engine. protocolo: " << ntohs(frame->type) << " tamanho frame: " << sizeof(*frame) << std::endl;
+    //std::cout << "NIC recebeu frame da engine. protocolo: " << ntohs(frame->type) << " tamanho frame: " << sizeof(*frame) << std::endl;
 
     // Cria buffer com o frame recebido e notifica os observadores registrados
     Buffer buffer(*frame, size);

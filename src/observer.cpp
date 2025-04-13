@@ -20,12 +20,12 @@ void Concurrent_Observer::update(Message message) {
 
 Message Concurrent_Observer::updated() {
 
-    std::cout << "Communicador esperando por mensagem zzz" << std::endl;
+    //std::cout << "Communicador esperando por mensagem zzz" << std::endl;
 
     // Espera até que novos dados estejam disponíveis
     sem_wait(&semaphore);
 
-    std::cout << "Communicador recebeu mensagem !!!" << std::endl;
+    //std::cout << "Communicador recebeu mensagem !!!" << std::endl;
 
     mutex.lock();
     Message message = _message_buffer.front();

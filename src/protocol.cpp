@@ -24,17 +24,14 @@ int Protocol::send(Address from, Address to, const void* data, unsigned int size
     buf->frame.src = from.mac_address; // Endereço de origem
     buf->frame.type = htons(0x88B5);   // Tipo do protocolo (customizado)
 
-    // Inicializa o cabeçalho e a mensagem
-    Ethernet::Header header;
-    Message message;
+    // Monta Payload com o cabeçalho e a mensagem
+    Ethernet::Payload payload;
+    payload.header.src_address = from; // Endereço de origem
+    payload.header.dst_address = to;   // Endereço de destino
+    std::memcpy(payload.data, data, size); // Dados da mensagem
 
-    // Preenche o cabeçalho com os endereços de origem e destino
-    header.src_address = from;  // Endereço de origem
-    header.dst_address = to;    // Endereço de destino
-    message.setData(data, size); // Dados da mensagem
-
-    // Verifica se o tamanho do payload não excede o máximo permitido
-    if (!_nic->fillPayload(&buf->frame, &header, &message)) {
+    // Preenche o payload do frame com os dados.
+    if (!_nic->fillPayload(&buf->frame, &payload)) {
         return -1; // Retorna -1 se o preenchimento falhar
     }
 
@@ -46,19 +43,21 @@ void Protocol::receive(void* buf) {
     // Conversão direta de void* para Buffer*
     Buffer* buffer = static_cast<Buffer*>(buf);
 
-    // Inicializa o cabeçalho e a mensagem
-    Ethernet::Header header;
-    Message message;
+    // Inicializa Payload para receber os dados.
+    Ethernet::Payload payload;
 
     // Chama o método extractPayload para preencher o cabeçalho e a mensagem
-    _nic->extractPayload(&buffer->frame, &header, &message);
+    _nic->extractPayload(&buffer->frame, &payload);
 
     // Obtém os endereços de origem e destino do cabeçalho
-    Address dst = header.dst_address; // Endereço de destino
-    Address src = header.src_address; // Endereço de origem
+    Address dst = payload.header.dst_address; // Endereço de destino
+    Address src = payload.header.src_address; // Endereço de origem
+
+    Message msg;
+    msg.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
 
     // Notifica os observadores com o endereço de destino e a mensagem
-    _observed.notify(dst, message);
+    _observed.notify(dst, msg);
 
     // Libera o buffer alocado para o frame
     //_nic->free(buffer);
