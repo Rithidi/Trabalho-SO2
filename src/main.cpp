@@ -32,7 +32,7 @@ void enviar_mensagem() {
 
     int contador = 1;
 
-    while (contador < 11) { // Enviar 5 mensagens para teste
+    while (contador < 10001) { // Enviar 5 mensagens para teste
         Message msg;
         string dados = "Mensagem " + to_string(contador);
         msg.setData(dados.c_str(), dados.size() + 1);
@@ -50,7 +50,7 @@ void enviar_mensagem() {
         } else {
             cerr << "Falha no envio do sensor" << endl;
         }
-        this_thread::sleep_for(0.1s); // Espera 1 segundo entre os envios
+        this_thread::sleep_for(0.0001s); // Espera 1 segundo entre os envios
     }
 }
 
@@ -62,12 +62,12 @@ void receber_mensagem() {
     Protocol protocol_b(&nic_b, 0x88B5);
     Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
 
-    for (int i = 0; i < 10; ++i) { // Esperar 5 mensagens para teste
+    for (int i = 0; i < 10000; ++i) { // Esperar 5 mensagens para teste
         Message msg;
 
         if (controle.receive(&msg)) {
             string mensagem(reinterpret_cast<const char*>(msg.data()));
-            cout << "Controle (veiculo 2)" << " recebeu: " << mensagem << endl;
+            cout << i + 1 << "Controle (veiculo 2)" << " recebeu: " << mensagem << endl;
         } else {
             cerr << "Falha no recebimento do controle" << endl;
         }
@@ -85,6 +85,7 @@ int main() {
 
     if (pid > 0) {
         // Processo pai - Enviar mensagens
+        this_thread::sleep_for(0.1s); // Espera processo de recebimento iniciar NIC.
         enviar_mensagem();
         wait(NULL); // Espera o processo filho terminar
         cout << "Processo enviar terminou." << endl;

@@ -34,7 +34,6 @@ int Protocol::send(Address from, Address to, const void* data, unsigned int size
     if (!_nic->fillPayload(&buf->frame, &payload)) {
         return -1; // Retorna -1 se o preenchimento falhar
     }
-
     // Envia o frame pela NIC
     return _nic->send(buf);
 }
@@ -58,9 +57,6 @@ void Protocol::receive(void* buf) {
 
     // Notifica os observadores com o endereço de destino e a mensagem
     _observed.notify(dst, msg);
-
-    // Libera o buffer alocado para o frame
-    //_nic->free(buffer);
 }
 
 

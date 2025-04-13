@@ -70,6 +70,8 @@ int NIC<Engine>::send(Buffer* buf) {
     // Envia o frame diretamente do buffer para o engine
     int result = engine->send(frame, sizeof(*frame));  // Usa sizeof(*frame) para obter o tamanho real da estrutura
 
+    free(buf);  // Libera o buffer após o envio
+
     return result;
 }
 

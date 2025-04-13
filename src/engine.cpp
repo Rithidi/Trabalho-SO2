@@ -122,8 +122,6 @@ void Engine::receive_loop() {
                     queue_cv.notify_one();
                 }
             }
-        } else if (received_bytes < 0) {
-            perror("Error receiving Ethernet frame");
         }
     }
 }

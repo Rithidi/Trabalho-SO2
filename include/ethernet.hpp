@@ -32,7 +32,7 @@ public:
 
     struct Payload {
         Header header; // Cabeçalho do protocolo 16 bytes
-        uint8_t data[100]; // Mensagem a ser transmitida 1470 bytes
+        uint8_t data[1470]; // Mensagem a ser transmitida 1470 bytes
     } __attribute__((packed));
 
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)
