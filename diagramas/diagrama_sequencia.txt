@@ -1,36 +1,28 @@
-title This is a title
+
 
 participant Client
 participant Message
 participant Communicator
 participant Protocol
-participant NIC Ethernet
+participant NIC
 participant Engine
-participant NIC Fisica
+participant NIC Física
 
-Message: cliente
+Client->Message: setData(src, size)
+Message->Communicator: send(message, destination)
+Communicator->Protocol: send(from, to, data, size)
+Protocol->NIC: alloc(dst, prot, size)
+NIC->Protocol: Buffer
+Protocol->NIC: send(buf)
+NIC->Engine: send(data, size)
+Engine->NIC Física: send(data, size)
 
-
-
-Client->Message: create
-Message->Communicator: send(m)
-Communicator->Protocol: send(F,t,d,s)
-Protocol->NIC Ethernet: alloc(d, P, s)
-NIC Ethernet->Protocol: Buffer
-Protocol->NIC Ethernet: send(b)
-NIC Ethernet->Engine: sendto(d,s,P,d)
-Engine->NIC Fisica:
-NIC Fisica->Engine: interrupcao(F)
-Engine->Engine: signal
-Engine->NIC Ethernet: notify(c, d)
-NIC Ethernet->Protocol: notify(c, d)
-NIC Ethernet->Protocol: update(c, P, b)
-
-Protocol->Communicator: notify
-Protocol->Communicator: update(c,b)
-Protocol->NIC Ethernet: free
-
-Communicator->Communicator: insert(d)
-Communicator->Communicator:sem v
-Message->Communicator: sem p
-Client->Message: receive()
+NIC Física->Engine: receive_loop()
+Engine->Engine: process_queue()
+Engine->NIC: receive(frame, size)
+NIC->Protocol: notify(protocol_number, buffer)
+Protocol->Communicator: notify(adr, message)
+Communicator->Communicator: insert(message)
+Communicator->Communicator: sem_post()
+Message->Communicator: sem_wait()
+Client->Message: data()
