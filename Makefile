@@ -16,9 +16,12 @@ SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 # Interface de rede (pode ser passada como argumento ao make)
 NETWORK_INTERFACE ?= "lo"
 
+# Número total de mensagens (pode ser passado como argumento ao make)
+TOTAL_MESSAGES ?= 1000
+
 # Regra principal: compila diretamente para o executável
 $(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DNETWORK_INTERFACE=$(NETWORK_INTERFACE) $^ -o $@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DNETWORK_INTERFACE=$(NETWORK_INTERFACE) -DTOTAL_MESSAGES=$(TOTAL_MESSAGES) $^ -o $@
 	@echo "Executável criado: $(TARGET)"
 
 # Limpeza

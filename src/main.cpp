@@ -26,6 +26,11 @@ const Ethernet::Port PORTA_CONTROLE = 5001;
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
+// Definir o número total de mensagens como uma macro
+#ifndef TOTAL_MESSAGES
+#define TOTAL_MESSAGES 100 // Valor padrão caso a macro não seja definida
+#endif
+
 // Função que simula o envio de mensagens pelo sensor
 void enviar_mensagem() {
     // Criar NICs e protocolos para os veículos
@@ -43,7 +48,7 @@ void enviar_mensagem() {
 
     int contador = 1;
 
-    while (contador < 1001) { // Enviar  mensagens para teste
+    while (contador <= TOTAL_MESSAGES) { // Enviar o número total de mensagens configurado
         Message msg;
         string dados = "Mensagem N:" + to_string(contador);
         msg.setData(dados.c_str(), dados.size() + 1);
@@ -55,13 +60,10 @@ void enviar_mensagem() {
 
         // Enviar mensagem
         if (sensor.send(&msg, destino)) {
-            cout << "Veiculo 1" << " enviou: " << dados << endl;
-
-            // Envia a confirmação para o processo filho via pipe
+            cout << "Veiculo 1 enviou: " << dados << endl;
         } else {
             cerr << "Falha no envio do sensor" << endl;
         }
-        this_thread::sleep_for(0.001s); // Espera 1 segundo entre os envios
     }
 }
 
@@ -81,18 +83,20 @@ void receber_mensagem() {
     Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
 
     int i = 1;
-    while (1) { // Espera mensagens para teste
+    while (i <= TOTAL_MESSAGES) { // Receber o número total de mensagens configurado
         Message msg;
 
         if (controle.receive(&msg)) {
             string mensagem(reinterpret_cast<const char*>(msg.data()));
-            cout << " Veiculo 2 recebeu: " << mensagem << ", Total:" << i << endl;
-            i++; // Incrementa o contador apenas se a mensagem for recebida
-
+            cout << "Veiculo 2 recebeu: " << mensagem << ", Total: " << i << endl;
+            i++;
         } else {
             cerr << "Falha no recebimento do controle" << endl;
         }
     }
+
+    // Exibe o total de mensagens recebidas
+    cout << "Total de mensagens recebidas pelo controle: " << TOTAL_MESSAGES << endl;
 }
 
 int main() {
@@ -105,17 +109,12 @@ int main() {
     }
 
     if (pid > 0) {
-        // Processo pai - Enviar mensagens
-        this_thread::sleep_for(0.2s); // Espera processo de recebimento iniciar NIC.
+        this_thread::sleep_for(2ms); 
         enviar_mensagem();
-        wait(NULL); // Espera o processo filho terminar
-        cout << "Processo enviar terminou." << endl;
+        wait(nullptr); // Espera o processo filho terminar
     } else {
-        // Processo filho - Receber mensagens
         receber_mensagem();
-        cout << "Processo receber terminou." << endl;
     }
 
-    cout << "Teste finalizado." << endl;
     return 0;
 }
