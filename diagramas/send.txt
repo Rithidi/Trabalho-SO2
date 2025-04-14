@@ -1,0 +1,74 @@
+title Detailed Sequence Diagram for send with Improvements
+
+participant Client
+participant Message
+participant Communicator
+participant Protocol
+participant NIC
+participant Engine
+participant NIC Física
+
+Client->Message: setData(src, size)
+activate Message
+alt src == nullptr
+    Message->Client: Throw invalid_argument exception
+else
+    Message->Message: Limit size to MAX_SIZE
+    Message->Message: memcpy(_data, src, _size)
+end
+deactivate Message
+
+Client->Communicator: send(message, destination)
+activate Communicator
+Communicator->Message: data()
+activate Message
+Message->Message: Access internal buffer (_data)
+deactivate Message
+Communicator->Message: size()
+activate Message
+Message->Message: Access message size (_size)
+deactivate Message
+
+Communicator->Protocol: send(_address, destination, data_pointer, data_size)
+activate Protocol
+alt Payload size > MAX_PAYLOAD
+    Protocol->Protocol: Handle payload size error
+else
+    Protocol->NIC: alloc(destination, protocol_number, sizeof(Ethernet::Frame))
+    activate NIC
+    NIC->NIC: Allocate Buffer
+    NIC->Protocol: Buffer
+    deactivate NIC
+
+    alt Buffer == nullptr
+        Protocol->Protocol: Handle allocation failure
+    else
+        Protocol->Protocol: Fill frame header
+        Protocol->Protocol: Create payload
+        Protocol->NIC: fillPayload(&buf->frame, &payload)
+        activate NIC
+        alt Payload filling fails
+            Protocol->Protocol: Handle payload failure
+        else
+            Protocol->NIC: send(buf)
+            activate NIC
+            NIC->Engine: send(data, size)
+            activate Engine
+            Engine->Engine: Configure dest_addr (MAC, protocol, interface index)
+            Engine->NIC Física: sendto(data, size, dest_addr)
+            alt sendto fails
+                Engine->Engine: Handle error (return -1)
+            else
+                Engine->Engine: Return sent_bytes
+            end
+            deactivate Engine
+            NIC->NIC: Update tx_packets and tx_bytes
+            NIC->NIC: free(buf)
+            deactivate NIC
+        end
+        deactivate NIC
+    end
+end
+deactivate Protocol
+Communicator->Client: true/false
+deactivate Communicator
