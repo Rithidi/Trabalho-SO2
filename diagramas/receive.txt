@@ -1,4 +1,4 @@
-title Detailed Sequence Diagram for send with Improvements
+
 
 participant Client
 participant Message
