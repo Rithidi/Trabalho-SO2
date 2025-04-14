@@ -12,7 +12,7 @@
 #include "../include/engine.hpp"
 
 using namespace std;
-using namespace std::chrono_literals;
+using namespace std::chrono;
 
 // Endereços MAC fictícios para os veículos
 const Ethernet::Mac_Address MAC_VEICULO_A = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x01};
@@ -33,12 +33,11 @@ const Ethernet::Port PORTA_CONTROLE = 5001;
 
 // Função que simula o envio de mensagens pelo sensor
 void enviar_mensagem() {
-    // Criar NICs e protocolos para os veículos
     const char* interface = 
 #ifdef NETWORK_INTERFACE
-        TOSTRING(NETWORK_INTERFACE); // Transforma a macro em string literal
+        TOSTRING(NETWORK_INTERFACE);
 #else
-        "lo"; // Valor padrão caso a macro não seja definida
+        "lo";
 #endif
 
     NIC<Engine> nic_a(interface);
@@ -48,17 +47,18 @@ void enviar_mensagem() {
 
     int contador = 1;
 
-    while (contador <= TOTAL_MESSAGES) { // Enviar o número total de mensagens configurado
+    while (contador <= TOTAL_MESSAGES) {
         Message msg;
-        string dados = "Mensagem N:" + to_string(contador);
+
+        // Add timestamp to the message
+        auto now = duration_cast<microseconds>(steady_clock::now().time_since_epoch()).count();
+        string dados = "Mensagem N:" + to_string(contador) + "|" + to_string(now);
         msg.setData(dados.c_str(), dados.size() + 1);
 
         contador++;
 
-        // Endereço de destino (componente de controle do outro veículo)
         Ethernet::Address destino = {MAC_VEICULO_B, PORTA_CONTROLE};
 
-        // Enviar mensagem
         if (sensor.send(&msg, destino)) {
             cout << "Veiculo 1 enviou: " << dados << endl;
         } else {
@@ -69,12 +69,11 @@ void enviar_mensagem() {
 
 // Função que simula o recebimento de mensagens pelo controle
 void receber_mensagem() {
-    // Criar NICs e protocolos para os veículos
     const char* interface = 
 #ifdef NETWORK_INTERFACE
-        TOSTRING(NETWORK_INTERFACE); // Transforma a macro em string literal
+        TOSTRING(NETWORK_INTERFACE);
 #else
-        "lo"; // Valor padrão caso a macro não seja definida
+        "lo";
 #endif
 
     NIC<Engine> nic_b(interface);
@@ -83,25 +82,43 @@ void receber_mensagem() {
     Communicator controle(&protocol_b, MAC_VEICULO_B, PORTA_CONTROLE);
 
     int i = 1;
-    while (i <= TOTAL_MESSAGES) { // Receber o número total de mensagens configurado
+    double total_latency = 0.0;
+
+    while (i <= TOTAL_MESSAGES) {
         Message msg;
 
         if (controle.receive(&msg)) {
             string mensagem(reinterpret_cast<const char*>(msg.data()));
-            cout << "Veiculo 2 recebeu: " << mensagem << ", Total: " << i << endl;
+
+            // Extract timestamp from the message
+            size_t pos = mensagem.find_last_of('|');
+            if (pos != string::npos) {
+                string timestamp_str = mensagem.substr(pos + 1);
+                auto sent_time = stoll(timestamp_str);
+
+                // Calculate latency
+                auto now = duration_cast<microseconds>(steady_clock::now().time_since_epoch()).count();
+                double latency = (now - sent_time) / 1000.0; // Convert to milliseconds
+                total_latency += latency;
+
+                cout << "Veiculo 2 recebeu: " << mensagem.substr(0, pos) 
+                     << ", Latencia: " << latency << " ms, Total: " << i << endl;
+            }
+
             i++;
         } else {
             cerr << "Falha no recebimento do controle" << endl;
         }
     }
 
-    // Exibe o total de mensagens recebidas
+    // Exibe o total de mensagens recebidas e a latência média
     cout << "Total de mensagens recebidas pelo controle: " << TOTAL_MESSAGES << endl;
+    cout << "Latência média: " << (total_latency / TOTAL_MESSAGES) << " ms" << endl;
 }
 
 int main() {
     cout << "TESTE: Comunicacao entre componentes de veiculos diferentes (processos distintos)" << endl;
-    pid_t pid = fork(); // Cria o processo filho
+    pid_t pid = fork();
 
     if (pid == -1) {
         cerr << "Erro ao criar o processo" << endl;
@@ -111,7 +128,7 @@ int main() {
     if (pid > 0) {
         this_thread::sleep_for(2ms); 
         enviar_mensagem();
-        wait(nullptr); // Espera o processo filho terminar
+        wait(nullptr);
     } else {
         receber_mensagem();
     }
