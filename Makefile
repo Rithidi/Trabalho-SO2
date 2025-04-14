@@ -13,9 +13,12 @@ TARGET := main.exe
 # Lista todos os arquivos .cpp
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 
+# Interface de rede (pode ser passada como argumento ao make)
+NETWORK_INTERFACE ?= "lo"
+
 # Regra principal: compila diretamente para o executável
 $(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DNETWORK_INTERFACE=$(NETWORK_INTERFACE) $^ -o $@
 	@echo "Executável criado: $(TARGET)"
 
 # Limpeza
