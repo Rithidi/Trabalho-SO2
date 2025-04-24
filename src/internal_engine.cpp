@@ -13,6 +13,13 @@ InternalEngine::InternalEngine(Callback callback)
     processing_thread = std::thread(&InternalEngine::process_queue, this);
 }
 
+// Constructor for InternalEngine (new signature)
+InternalEngine::InternalEngine(const std::string& interface, Callback callback, bool flag)
+    : _callback(callback), stop_processing(false) {
+    // The `interface` and `flag` arguments are accepted but not used
+    processing_thread = std::thread(&InternalEngine::process_queue, this);
+}
+
 // Destructor for InternalEngine
 InternalEngine::~InternalEngine() {
     // Signal the processing thread to stop
@@ -29,7 +36,7 @@ InternalEngine::~InternalEngine() {
 }
 
 // Method to add data to the queue
-void InternalEngine::send(const void* data, size_t size) {
+int InternalEngine::send(const void* data, size_t size) {
     std::vector<char> buffer(static_cast<const char*>(data), static_cast<const char*>(data) + size);
 
     {
@@ -37,6 +44,7 @@ void InternalEngine::send(const void* data, size_t size) {
         buffer_queue.emplace(std::move(buffer), size);
     }
     queue_cv.notify_one();
+    return 1; // Return 1 to indicate success
 }
 
 // Method to process the queue

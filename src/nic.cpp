@@ -19,12 +19,16 @@ template <typename Engine>
 NIC<Engine>::NIC(const std::string& interface)
     : engine(std::make_unique<Engine>(interface, [this](const void* data, size_t size) {
           this->receive(reinterpret_cast<const Frame*>(data), size);
-      }, true)), mac_address({0}) {
-    // Gera um endereço MAC aleatório
+      }, true)),
+      internal_engine(std::make_unique<InternalEngine>(interface, [this](const void* data, size_t size) {
+          this->receive(reinterpret_cast<const Frame*>(data), size);
+      }, true)),
+      mac_address({0}) { // Member initializer list ends here
+    // Generate a random MAC address
     for (auto& byte : mac_address) {
         byte = static_cast<uint8_t>(rand() % 256);
     }
-    stats = {0};  // Zera todas as estatísticas
+    stats = {0}; // Reset all statistics
 }
 
 // Destruidor da classe NIC

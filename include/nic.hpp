@@ -8,6 +8,7 @@
 #include "observer.hpp"
 #include "message.hpp"
 #include "engine.hpp"
+#include "internal_engine.hpp"
 
 
 template <typename Engine>
@@ -54,6 +55,7 @@ public:
     
 private:
     std::unique_ptr<Engine> engine;           // Mecanismo de rede específico (depende do template)
+    std::unique_ptr<InternalEngine> internal_engine; // Engine para comunicacão interna
     Mac_Address mac_address;                  // Endereço MAC da interface
     Statistics stats;                         // Estatísticas de tráfego
     Conditional_Data_Observed observed;

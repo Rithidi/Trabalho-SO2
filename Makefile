@@ -14,7 +14,7 @@ TARGET := main.exe
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 
 # Interface de rede (pode ser passada como argumento ao make)
-NETWORK_INTERFACE ?= "lo"
+NETWORK_INTERFACE ?= "enp7s0"
 
 # Número total de mensagens (pode ser passado como argumento ao make)
 TOTAL_MESSAGES ?= 1000
