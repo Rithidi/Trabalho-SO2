@@ -44,7 +44,7 @@ public:
     const Mac_Address& get_address() const;
     
     Buffer* alloc(Address dst, Protocol_Number prot, unsigned int size);
-    int send(Buffer* buf);
+    int send(Buffer* buf, bool internal);
     void receive(const Frame* frame, size_t size);
     const Statistics& get_statistics() const;
     

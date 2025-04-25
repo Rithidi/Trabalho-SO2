@@ -6,7 +6,7 @@
 class Message {
 public:
     // Tamanho máximo da mensagem (em bytes)
-    static constexpr size_t MAX_SIZE = 1470; // 1500 - 14 (tamanho do cabeçalho Ethernet) - 16 (tamanho header) - 2 (tamanho do tipo)
+    static constexpr size_t MAX_SIZE = 1454; // 1500 - 14 (tamanho do cabeçalho Ethernet) - 32 (tamanho header)
     
     // Construtor: inicializa a mensagem com tamanho zero
     Message() : _size(0) {}

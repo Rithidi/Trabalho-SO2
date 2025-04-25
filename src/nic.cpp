@@ -62,17 +62,23 @@ typename NIC<Engine>::Buffer* NIC<Engine>::alloc(Address dst, Protocol_Number pr
 }
 
 template <typename Engine>
-int NIC<Engine>::send(Buffer* buf) {
+int NIC<Engine>::send(Buffer* buf, bool internal) {
+    // Pega o frame do buffer
     Ethernet::Frame* frame = &buf->frame;
-
-    // Corrige o tamanho real da estrutura Frame
-    //std::cout << "NIC enviando frame para engine. protocolo: " << frame->type << " tamanho frame: " << sizeof(*frame) << std::endl;
 
     // Verifica se o tamanho do buffer não excede 1500 bytes (tamanho máximo permitido para Ethernet)
     if (buf->size > 1500) return -1;
 
-    // Envia o frame diretamente do buffer para o engine
-    int result = engine->send(frame, sizeof(*frame));  // Usa sizeof(*frame) para obter o tamanho real da estrutura
+    int result;
+
+    // Verifica se o endereço de origem e destino são iguais
+    if (internal) {
+        // Se o endereço de origem e destino forem iguais, envia pelo internal_engine
+        result = internal_engine->send(frame, sizeof(*frame)); 
+    } else {
+        // Se o endereço de origem e destino forem diferentes, envia pelo engine normal
+        result = engine->send(frame, sizeof(*frame));
+    }
 
     free(buf);  // Libera o buffer após o envio
 
@@ -84,16 +90,17 @@ int NIC<Engine>::send(Buffer* buf) {
 template <typename Engine>
 void NIC<Engine>::receive(const Frame* frame, size_t size) {
 
-    //std::cout << "NIC recebeu frame da engine. protocolo: " << ntohs(frame->type) << " tamanho frame: " << sizeof(*frame) << std::endl;
-
-    // Cria buffer com o frame recebido e notifica os observadores registrados
-    Buffer buffer(*frame, size);
+    // Aloca dinamicamente um buffer com o frame recebido
+    Buffer* buffer = new Buffer(*frame, size);
 
     // Pega protocolo correspondente ao frame recebido
     Ethernet::Protocol_Number protocol = ntohs(frame->type);
 
-    // Notifica o observador do protocolo correspondente
-    observed.notify(protocol, &buffer);
+    // Notifica o observador do protocolo correspondente, passando o ponteiro do buffer
+    observed.notify(protocol, buffer);
+
+    // Libera o buffer após a notificação
+    //delete buffer;
 }
 
 // Retorna as estatísticas atuais da interface

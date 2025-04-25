@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+#include <pthread.h>
+
 /**
  * @brief Classe que representa o protocolo Ethernet simplificado para comunicação por broadcast
  * 
@@ -15,24 +17,25 @@
  */
 class Ethernet {
 public:
-    // Define o tipo para endereços MAC (6 bytes)
-    using Protocol_Number = uint16_t;
-    using Mac_Address = std::array<uint8_t, 6>;
-    typedef unsigned short Port;
+    using Protocol_Number = uint16_t; // (2 bytes)
+    using Mac_Address = std::array<uint8_t, 6>; // (6 bytes)
+    using Thread_ID = pthread_t; // (8 bytes)
+    typedef unsigned short Port; // (2 bytes)
 
-    struct Address {
-        Mac_Address mac_address; // Endereço MAC
-        Port port; // Porta de origem
+    struct Address { // (16 bytes)
+        Mac_Address vehicle_id; // Endereço MAC (identificador do carro) (6 bytes)
+        Thread_ID component_id; // ID da thread (identificador do componente) (8 bytes)
+        Port port; // Porta de origem (2 bytes)
     } __attribute__((packed));
 
-    struct Header {
-        Address src_address; // Endereço de origem
-        Address dst_address; // Endereço de destino
+    struct Header { // (32 bytes)
+        Address src_address; // Endereço de origem (16 bytes)
+        Address dst_address; // Endereço de destino (16 bytes)
     } __attribute__((packed));
 
     struct Payload {
-        Header header; // Cabeçalho do protocolo 16 bytes
-        uint8_t data[1470]; // Mensagem a ser transmitida 1470 bytes
+        Header header; // Cabeçalho do protocolo 32 bytes
+        uint8_t data[1454]; // Mensagem a ser transmitida 1454 bytes
     } __attribute__((packed));
 
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)

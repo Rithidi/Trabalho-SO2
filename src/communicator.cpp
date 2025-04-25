@@ -1,14 +1,16 @@
 #include "../include/communicator.hpp"
 
-Communicator::Communicator(Protocol* protocol, std::array<uint8_t, 6> mac_address, Port port)
+Communicator::Communicator(Protocol* protocol, std::array<uint8_t, 6> vehicle_id, Thread_ID component_id, Port port)
     : _protocol(protocol) 
 {
-    // Inicializa o endereço MAC e a porta do comunicador
-    _address.mac_address = mac_address;
+    // Inicializa o endereço MAC, identificador do componente e porta do comunicador.
+    _address.vehicle_id = vehicle_id;
+    _address.component_id = component_id;
     _address.port = port;
     
     // Inicializa o observador com o endereço do comunicador
-    observer.communicator_address.mac_address = mac_address;
+    observer.communicator_address.vehicle_id = vehicle_id;
+    observer.communicator_address.component_id = component_id;
     observer.communicator_address.port = port;
 
     // Adiciona o observador à lista de observadores do protocolo

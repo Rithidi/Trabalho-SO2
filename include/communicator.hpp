@@ -7,11 +7,12 @@
 
 using Address = Ethernet::Address;
 using Port = Ethernet::Port;
+using Thread_ID = Ethernet::Thread_ID;
 
 class Communicator {
 public:
     // Construtor: inicializa o comunicador com o protocolo, endereço MAC e porta
-    Communicator(Protocol* protocol, std::array<uint8_t, 6> mac_address, Port port);
+    Communicator(Protocol* protocol, std::array<uint8_t, 6> vehicle_id, Thread_ID component_id, Port port);
 
     // Destrutor: desanexa o observador do protocolo
     ~Communicator();

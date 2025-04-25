@@ -50,7 +50,7 @@ void Concurrent_Observed::detach(Concurrent_Observer* observer) {
 void Concurrent_Observed::notify(Address adr, Message message) {
     mutex.lock();
     for (Concurrent_Observer* obs : observers) {
-        if (obs->communicator_address.mac_address == adr.mac_address && obs->communicator_address.port == adr.port) {
+        if (obs->communicator_address.component_id == adr.component_id && obs->communicator_address.port == adr.port) {
             obs->update(message);  // Atualiza o observador com os dados
         }
     }

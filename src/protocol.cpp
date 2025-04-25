@@ -21,7 +21,7 @@ int Protocol::send(Address from, Address to, const void* data, unsigned int size
     if (buf == nullptr) return -1;
 
     // Preenche o cabeçalho do frame Ethernet
-    buf->frame.src = from.mac_address; // Endereço de origem
+    buf->frame.src = from.vehicle_id; // Endereço de origem
     buf->frame.type = htons(0x88B5);   // Tipo do protocolo (customizado)
 
     // Monta Payload com o cabeçalho e a mensagem
@@ -33,9 +33,17 @@ int Protocol::send(Address from, Address to, const void* data, unsigned int size
     // Preenche o payload do frame com os dados.
     if (!_nic->fillPayload(&buf->frame, &payload)) {
         return -1; // Retorna -1 se o preenchimento falhar
-    }
-    // Envia o frame pela NIC
-    return _nic->send(buf);
+    }   
+
+    bool is_internal = false;
+
+    // Verifica se o endereço MAC de origem e destino são iguais
+    if (from.vehicle_id == to.vehicle_id) {
+        is_internal = true; // Define como interno se os endereços forem iguais
+    } 
+    
+    // Envia o frame Ethernet
+    return _nic->send(buf, is_internal);
 }
 
 void Protocol::receive(void* buf) {
@@ -47,6 +55,9 @@ void Protocol::receive(void* buf) {
 
     // Chama o método extractPayload para preencher o cabeçalho e a mensagem
     _nic->extractPayload(&buffer->frame, &payload);
+
+    // Libera o buffer após o uso
+    delete buffer;
 
     // Obtém os endereços de origem e destino do cabeçalho
     Address dst = payload.header.dst_address; // Endereço de destino
