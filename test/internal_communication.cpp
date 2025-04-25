@@ -174,10 +174,12 @@ int internal_communication(std::string networkInterface, int totalMessages) {
     const Ethernet::Mac_Address MAC_VEICULO_A = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x01};
 
     // Identificadores dos Componentes.
-    pthread_t receptor_id;
+    pthread_t receptor_1_id;
+    pthread_t receptor_2_id;
     pthread_t enviador_1_id;
     pthread_t enviador_2_id;
     pthread_t enviador_3_id;
+    pthread_t enviador_4_id;
 
     // Portas para os componentes.
     const Ethernet::Port PORTA_RECEPTOR = 5001;
@@ -187,14 +189,19 @@ int internal_communication(std::string networkInterface, int totalMessages) {
     Veiculo veiculo_a(networkInterface, "Veiculo A", MAC_VEICULO_A);
 
     // Adiciona componente Receptor no veiculo A.
-    veiculo_a.adicionar_componente_receptor("Receptor A", MAC_VEICULO_A, receptor_id, PORTA_RECEPTOR, NUM_MENSAGENS*3);
+    veiculo_a.adicionar_componente_receptor("Receptor A", MAC_VEICULO_A, receptor_1_id, PORTA_RECEPTOR, NUM_MENSAGENS*3);
+    // Adiciona componente Receptor no veiculo A.
+    veiculo_a.adicionar_componente_receptor("Receptor B", MAC_VEICULO_A, receptor_2_id, PORTA_RECEPTOR, NUM_MENSAGENS);
 
     // Monta o endereço de destino para os enviadores.
-    Ethernet::Address endereco_receptor_a = {MAC_VEICULO_A, receptor_id, PORTA_RECEPTOR};
+    Ethernet::Address endereco_receptor_a = {MAC_VEICULO_A, receptor_1_id, PORTA_RECEPTOR};
+    Ethernet::Address endereco_receptor_b = {MAC_VEICULO_A, receptor_2_id, PORTA_RECEPTOR};
 
     // Adiciona os componentes Enviadores no veiculo A.
     veiculo_a.adicionar_componente_enviador("Enviador 1", MAC_VEICULO_A, enviador_1_id, PORTA_ENVIADOR, endereco_receptor_a, NUM_MENSAGENS);
     veiculo_a.adicionar_componente_enviador("Enviador 2", MAC_VEICULO_A, enviador_2_id, PORTA_ENVIADOR, endereco_receptor_a, NUM_MENSAGENS);
     veiculo_a.adicionar_componente_enviador("Enviador 3", MAC_VEICULO_A, enviador_3_id, PORTA_ENVIADOR, endereco_receptor_a, NUM_MENSAGENS);
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000)); // Ajuste o delay conforme necessário
+    veiculo_a.adicionar_componente_enviador("Enviador 4", MAC_VEICULO_A, enviador_4_id, PORTA_ENVIADOR, endereco_receptor_b, NUM_MENSAGENS);
     return 0;
 }
