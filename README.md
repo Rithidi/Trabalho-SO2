@@ -28,15 +28,15 @@
 
 # Exemplo de execução:
 
-    sudo ./main.exe eth0 100
+    sudo ./main.exe eth0 10
 
-    Esse comando executará o programa na interface de rede eth0 e cada componente enviará 100 mensagens.
+    Esse comando executará o programa na interface de rede eth0 e cada componente Enviador enviará 10 mensagens.
 
 
 # Testes:
 
-    1. Teste de Comunicação Externa:
-    Este teste tem como objetivo validar a comunicação entre componentes de veículos distintos, onde os Enviadores dos veículos B, C e D enviam mensagens para o componente Receptor no veículo A. A comunicação é realizada por meio de processos independentes, criados com fork(), e cada componente (Enviador ou Receptor) opera em uma thread POSIX.
+    1. Teste de Comunicação Interna:
+    Este teste tem como objetivo validar a comunicação entre componentes de um único veículo, onde os Enviadores a1, b1, c1 enviam mensagens para o componente Receptor 1. Enquanto os Enviadores a2, b2, c2 enviam mensagens para o componente Receptor 2, também no veículo A. Todos os componentes (Enviadores e Receptor) são operados por threads POSIX dentro do mesmo processo.
 
-    2. Teste de Comunicação Interna:
-    Este teste tem como objetivo validar a comunicação entre componentes de um único veículo, onde os Enviadores do veículo A enviam mensagens para o componente Receptor, também no veículo A. Nesse caso, todos os componentes (Enviadores e Receptor) operam como threads POSIX dentro do mesmo processo.
+    2. Teste de Comunicação Externa:
+    Este teste tem como objetivo validar a comunicação entre componentes de veículos distintos, onde os Enviadores a1, a2, a3 do Veículo A enviam mensagens para o componente Receptor do Veículo B. Equanto os Enviadores b1, b2, b3 do Veículo B enviam mensagens para o componente Receptor do Veículo A. A comunicação é realizada por meio de processos independentes, criados com fork(), e cada componente (Enviador ou Receptor) é operado por uma thread POSIX.
