@@ -1,5 +1,4 @@
-#include <../test/internal_communication.cpp>
-//#include "../test/external_communication.cpp"
+#include "../test/communication.cpp"
 
 #include <iostream>
 #include <string>
@@ -25,13 +24,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Interface de rede: " << networkInterface << std::endl;
     std::cout << "Número total de mensagens: " << totalMessages << std::endl;
 
-    // Chama a função de teste de comunicação interna.
-    // Componentes Enviadores 1, 2 e 3 enviam mensagens para o componente Receptor
-    internal_communication(networkInterface, totalMessages); 
-
-    // Chama a função de teste de comunicação externa.
-    // Componentes Enviadores dos Veiculos B, C e D enviam mensagens para o componente Receptor do Veiculo A
-    //external_communication(networkInterface, totalMessages); 
+    teste_comunicacao_interna(networkInterface, totalMessages);
+    teste_comunicacao_externa(networkInterface, totalMessages);
 
     return 0;
 }
