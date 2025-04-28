@@ -14,8 +14,6 @@ using Callback = std::function<void(const void*, size_t)>;
 
 class InternalEngine {
 public:
-    // Existing constructor
-    InternalEngine(Callback callback);
 
     // New constructor to match NIC's requirements
     InternalEngine(const std::string& interface, Callback callback, bool flag);
