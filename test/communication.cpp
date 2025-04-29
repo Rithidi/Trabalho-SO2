@@ -22,11 +22,14 @@ class Componente {
         void enviar_mensagem(Address endereco_destino, int num_mensagens) {
             int contador = 1;
             Message mensagem;
-
+        
             for (int i = 0; i < num_mensagens; i++) {
-                // Prepara os dados da mensagem.
-                std::string dados = "mensagem do " + nome + " (num: " + std::to_string(contador) + ")";
+                // Prepara os dados da mensagem com o timestamp.
+                auto timestamp = std::chrono::high_resolution_clock::now();
+                long long timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count();
+                std::string dados = "mensagem do " + nome + " (num: " + std::to_string(contador) + ") timestamp: " + std::to_string(timestamp_ms);
                 mensagem.setData(dados.c_str(), dados.size() + 1);
+        
                 // Envia a mensagem.
                 if (comunicador.send(&mensagem, endereco_destino)) {
                     std::cout << " 📨 " << nome << ": enviou mensagem " << std::to_string(contador) << std::endl << std::flush;
@@ -41,20 +44,37 @@ class Componente {
         void recebe_mensagem(int num_mensagens) {
             std::cout << "📬 " << nome << " esperando por mensagens" << std::endl;
             Message mensagem;
+        
+            double total_latency = 0.0;
+        
             for (int i = 0; i < num_mensagens; i++) {
-                // Recebe a mensagem.
-                //std::cout << "📬 " << nome << " esperando por mensagens" << std::endl;
                 if (comunicador.receive(&mensagem)) {
-                    // Converte os dados da mensagem para string.
+                    // Extrai o timestamp da mensagem recebida.
                     std::string msg(reinterpret_cast<const char*>(mensagem.data()));
-                    // Imprime a mensagem recebida.
-                    std::cout << "📬 " << nome << ": recebeu " << msg.data() << std::endl << std::flush;
+                    size_t pos = msg.find("timestamp: ");
+                    if (pos != std::string::npos) {
+                        long long timestamp_ms = std::stoll(msg.substr(pos + 11));
+                        auto now = std::chrono::high_resolution_clock::now();
+                        long long now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+        
+                        // Calcula a latência total.
+                        double latency = now_ms - timestamp_ms;
+                        total_latency += latency;
+        
+                        // Imprime a mensagem e a latência.
+                        std::cout << "📬 " << nome << ": recebeu " << msg
+                                  << " com latência total de " << latency << " ms" << std::endl << std::flush;
+                    } else {
+                        std::cout << "Erro: timestamp não encontrado na mensagem." << std::endl;
+                    }
                 } else {
                     std::cout << "Erro ao receber mensagem." << std::endl;
                 }
             }
-            // Informa que o receptor terminou de receber mensagens.
-            std::cout << "** " << nome << " recebeu todas suas mensagens." << std::endl;
+        
+            // Calcula e exibe a média de latência.
+            double avg_latency = total_latency / num_mensagens;
+            std::cout << "📊 " << nome << ": média de latência total = " << avg_latency << " ms" << std::endl;
         }
 
     private:
