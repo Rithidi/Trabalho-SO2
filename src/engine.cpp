@@ -14,16 +14,20 @@
 #include <mutex>
 #include <condition_variable>
 #include <csignal>
+#include <fcntl.h> // Inclui fcntl.h para F_SETFL, O_ASYNC, etc.
+
+// Ponteiro estático para a instância da classe Engine
+static Engine* engine_instance = nullptr;
 
 // Função estática para manipular SIGIO
 static void sigio_handler(int signo) {
-    if (signo == SIGIO) {
+    if (signo == SIGIO && engine_instance) {
         constexpr size_t BUFFER_SIZE = 2048;
         char buffer[BUFFER_SIZE];
         const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
         // Recebe os dados do socket
-        ssize_t received_bytes = recvfrom(_socket, buffer, BUFFER_SIZE, 0, nullptr, nullptr);
+        ssize_t received_bytes = recvfrom(engine_instance->_socket, buffer, BUFFER_SIZE, 0, nullptr, nullptr);
         if (received_bytes > 0) {
             // Verifica se o frame é broadcast
             if (received_bytes >= 14) { // O cabeçalho Ethernet tem pelo menos 14 bytes
@@ -33,10 +37,10 @@ static void sigio_handler(int signo) {
                     std::vector<char> data(buffer, buffer + received_bytes);
 
                     {
-                        std::lock_guard<std::mutex> lock(queue_mutex);
-                        buffer_queue.emplace(std::move(data), received_bytes);
+                        std::lock_guard<std::mutex> lock(engine_instance->queue_mutex);
+                        engine_instance->buffer_queue.emplace(std::move(data), received_bytes);
                     }
-                    queue_cv.notify_one();
+                    engine_instance->queue_cv.notify_one();
                 }
             }
         }
@@ -46,6 +50,9 @@ static void sigio_handler(int signo) {
 // Construtor da classe Engine
 Engine::Engine(const std::string& interface, Callback callback, bool enable_receive)
     : _interface(interface), _callback(callback), _socket(-1) {
+    // Define a instância estática
+    engine_instance = this;
+
     // Cria um socket raw para capturar pacotes Ethernet
     _socket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (_socket < 0) {
