@@ -19,6 +19,12 @@ public:
 
     int send(const void* data, size_t size);
 
+    // Métodos para acesso controlado às variáveis privadas
+    int get_socket() const { return _socket; }
+    std::mutex& get_queue_mutex() { return queue_mutex; }
+    std::queue<std::pair<std::vector<char>, size_t>>& get_buffer_queue() { return buffer_queue; }
+    std::condition_variable& get_queue_cv() { return queue_cv; }
+
 private:
     std::string _interface;
     Callback _callback;

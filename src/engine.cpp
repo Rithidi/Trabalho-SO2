@@ -27,7 +27,7 @@ static void sigio_handler(int signo) {
         const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
         // Recebe os dados do socket
-        ssize_t received_bytes = recvfrom(engine_instance->_socket, buffer, BUFFER_SIZE, 0, nullptr, nullptr);
+        ssize_t received_bytes = recvfrom(engine_instance->get_socket(), buffer, BUFFER_SIZE, 0, nullptr, nullptr);
         if (received_bytes > 0) {
             // Verifica se o frame é broadcast
             if (received_bytes >= 14) { // O cabeçalho Ethernet tem pelo menos 14 bytes
@@ -37,10 +37,10 @@ static void sigio_handler(int signo) {
                     std::vector<char> data(buffer, buffer + received_bytes);
 
                     {
-                        std::lock_guard<std::mutex> lock(engine_instance->queue_mutex);
-                        engine_instance->buffer_queue.emplace(std::move(data), received_bytes);
+                        std::lock_guard<std::mutex> lock(engine_instance->get_queue_mutex());
+                        engine_instance->get_buffer_queue().emplace(std::move(data), received_bytes);
                     }
-                    engine_instance->queue_cv.notify_one();
+                    engine_instance->get_queue_cv().notify_one();
                 }
             }
         }
