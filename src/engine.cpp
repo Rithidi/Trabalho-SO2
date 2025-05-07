@@ -13,6 +13,35 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <csignal>
+
+// Função estática para manipular SIGIO
+static void sigio_handler(int signo) {
+    if (signo == SIGIO) {
+        constexpr size_t BUFFER_SIZE = 2048;
+        char buffer[BUFFER_SIZE];
+        const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+        // Recebe os dados do socket
+        ssize_t received_bytes = recvfrom(_socket, buffer, BUFFER_SIZE, 0, nullptr, nullptr);
+        if (received_bytes > 0) {
+            // Verifica se o frame é broadcast
+            if (received_bytes >= 14) { // O cabeçalho Ethernet tem pelo menos 14 bytes
+                const uint8_t* dest_mac = reinterpret_cast<const uint8_t*>(buffer);
+                if (std::memcmp(dest_mac, broadcast_mac, 6) == 0) {
+                    // O frame é broadcast, adiciona à fila
+                    std::vector<char> data(buffer, buffer + received_bytes);
+
+                    {
+                        std::lock_guard<std::mutex> lock(queue_mutex);
+                        buffer_queue.emplace(std::move(data), received_bytes);
+                    }
+                    queue_cv.notify_one();
+                }
+            }
+        }
+    }
+}
 
 // Construtor da classe Engine
 Engine::Engine(const std::string& interface, Callback callback, bool enable_receive)
@@ -26,7 +55,7 @@ Engine::Engine(const std::string& interface, Callback callback, bool enable_rece
 
     int buffer_size = 4 * 1024 * 1024; // 4 MB
     if (setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, &buffer_size, sizeof(buffer_size)) < 0) {
-    perror("Error setting socket receive buffer size");
+        perror("Error setting socket receive buffer size");
     }
 
     // Configura a interface de rede para o socket
@@ -38,12 +67,33 @@ Engine::Engine(const std::string& interface, Callback callback, bool enable_rece
         exit(EXIT_FAILURE);
     }
 
-    // Inicia a thread de recepção, se habilitada
-    if (enable_receive) {
-        std::thread recv_thread(&Engine::receive_loop, this);
-        recv_thread.detach();
+    // Configura o socket para modo assíncrono
+    if (fcntl(_socket, F_SETFL, O_ASYNC | O_NONBLOCK) < 0) {
+        perror("Erro ao configurar modo assíncrono no socket");
+        close(_socket);
+        exit(EXIT_FAILURE);
+    }
 
-        // Inicia a thread para processar a fila
+    // Define o processo atual como destinatário do SIGIO
+    if (fcntl(_socket, F_SETOWN, getpid()) < 0) {
+        perror("Erro ao configurar proprietário do SIGIO");
+        close(_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    // Registra o manipulador para SIGIO
+    struct sigaction sa {};
+    sa.sa_handler = sigio_handler;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGIO, &sa, nullptr) < 0) {
+        perror("Erro ao registrar manipulador para SIGIO");
+        close(_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    // Inicia a thread para processar a fila, se habilitada
+    if (enable_receive) {
         processing_thread = std::thread(&Engine::process_queue, this);
     }
 }
@@ -68,9 +118,6 @@ Engine::~Engine() {
 
 // Método para enviar um quadro Ethernet
 int Engine::send(const void* data, size_t size) {
-
-    //std::cout << *data << std::endl;
-
     struct sockaddr_ll dest_addr {};
     struct ifreq ifr {};
     std::strncpy(ifr.ifr_name, _interface.c_str(), IFNAMSIZ - 1);
@@ -97,33 +144,6 @@ int Engine::send(const void* data, size_t size) {
         perror("Error sending Ethernet frame");
     }
     return sent_bytes;
-}
-
-// Método que implementa o loop de recepção de quadros Ethernet
-void Engine::receive_loop() {
-    constexpr size_t BUFFER_SIZE = 2048;
-    char buffer[BUFFER_SIZE];
-    const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
-    while (true) {
-        ssize_t received_bytes = recvfrom(_socket, buffer, BUFFER_SIZE, 0, nullptr, nullptr);
-        if (received_bytes > 0) {
-            // Verifica se o frame é broadcast
-            if (received_bytes >= 14) { // O cabeçalho Ethernet tem pelo menos 14 bytes
-                const uint8_t* dest_mac = reinterpret_cast<const uint8_t*>(buffer);
-                if (std::memcmp(dest_mac, broadcast_mac, 6) == 0) {
-                    // O frame é broadcast, adiciona à fila
-                    std::vector<char> data(buffer, buffer + received_bytes);
-
-                    {
-                        std::lock_guard<std::mutex> lock(queue_mutex);
-                        buffer_queue.emplace(std::move(data), received_bytes);
-                    }
-                    queue_cv.notify_one();
-                }
-            }
-        }
-    }
 }
 
 // Método que processa a fila de buffers
