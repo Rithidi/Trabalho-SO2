@@ -13,6 +13,19 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <pthread.h>
+#include <cerrno>
+
+// Static helper function to set thread priority
+void Engine::set_thread_priority(std::thread& thread, int policy, int priority) {
+    struct sched_param sched_param {};
+    sched_param.sched_priority = priority;
+
+    int ret = pthread_setschedparam(thread.native_handle(), policy, &sched_param);
+    if (ret != 0) {
+        std::cerr << "Failed to set thread priority: " << std::strerror(errno) << std::endl;
+    }
+}
 
 // Construtor da classe Engine
 Engine::Engine(const std::string& interface, Callback callback, bool enable_receive)
@@ -26,7 +39,7 @@ Engine::Engine(const std::string& interface, Callback callback, bool enable_rece
 
     int buffer_size = 4 * 1024 * 1024; // 4 MB
     if (setsockopt(_socket, SOL_SOCKET, SO_RCVBUF, &buffer_size, sizeof(buffer_size)) < 0) {
-    perror("Error setting socket receive buffer size");
+        perror("Error setting socket receive buffer size");
     }
 
     // Configura a interface de rede para o socket
@@ -41,10 +54,12 @@ Engine::Engine(const std::string& interface, Callback callback, bool enable_rece
     // Inicia a thread de recepção, se habilitada
     if (enable_receive) {
         std::thread recv_thread(&Engine::receive_loop, this);
+        set_thread_priority(recv_thread, SCHED_FIFO, 50); // High priority for reception thread
         recv_thread.detach();
 
         // Inicia a thread para processar a fila
         processing_thread = std::thread(&Engine::process_queue, this);
+        set_thread_priority(processing_thread, SCHED_FIFO, 40); // Lower priority for processing thread
     }
 }
 
@@ -65,12 +80,8 @@ Engine::~Engine() {
     }
 }
 
-
 // Método para enviar um quadro Ethernet
 int Engine::send(const void* data, size_t size) {
-
-    //std::cout << *data << std::endl;
-
     struct sockaddr_ll dest_addr {};
     struct ifreq ifr {};
     std::strncpy(ifr.ifr_name, _interface.c_str(), IFNAMSIZ - 1);

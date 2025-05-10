@@ -18,6 +18,7 @@ public:
     ~Engine();
 
     int send(const void* data, size_t size);
+    static void set_thread_priority(std::thread& thread, int policy, int priority);
 
 private:
     std::string _interface;
@@ -36,4 +37,3 @@ private:
     void receive_loop();
     void process_queue();
 };
-
