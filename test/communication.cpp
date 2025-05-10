@@ -191,6 +191,9 @@ int teste_comunicacao_interna(std::string networkInterface, int totalMessages) {
     veiculo_a.cria_thread_receptor("Receptor 1", MAC_VEICULO_A, receptor_1_id, PORTA_RECEPTOR_1, NUM_MENSAGENS * 3);
     veiculo_a.cria_thread_receptor("Receptor 2", MAC_VEICULO_A, receptor_2_id, PORTA_RECEPTOR_2, NUM_MENSAGENS * 3);
 
+    // Espera um pouco para garantir que os receptores estejam prontos
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     // Cria Enviadores internos.
     veiculo_a.cria_thread_enviador("Enviador a1", MAC_VEICULO_A, a1_id, PORTA_ENVIADOR, endereco_receptor_1, NUM_MENSAGENS);
     veiculo_a.cria_thread_enviador("Enviador a2", MAC_VEICULO_A, a2_id, PORTA_ENVIADOR, endereco_receptor_2, NUM_MENSAGENS);
@@ -253,6 +256,7 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
         Veiculo veiculo_a(NETWORK_INTERFACE, "Veiculo A", MAC_VEICULO_A);
         veiculo_a.cria_thread_receptor("Receptor A", MAC_VEICULO_A, receptor_a_id, PORTA_RECEPTOR_A, NUM_MENSAGENS * 3);
 
+        // Espera um pouco para garantir que o receptor B esteja pronto
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // Cria Enviadores internos (veículo A)
@@ -273,6 +277,9 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
         // Cria Veículo B e Receptor
         Veiculo veiculo_b(NETWORK_INTERFACE, "Veiculo B", MAC_VEICULO_B);
         veiculo_b.cria_thread_receptor("Receptor B", MAC_VEICULO_B, receptor_b_id, PORTA_RECEPTOR_B, NUM_MENSAGENS * 3);
+
+        // Espera um pouco para garantir que o receptor A esteja pronto
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // Cria Enviadores internos (veículo B)
         veiculo_b.cria_thread_enviador("Enviador b1", MAC_VEICULO_B, b1_id, PORTA_ENVIADOR, endereco_receptor_a, NUM_MENSAGENS);
