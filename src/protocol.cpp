@@ -67,7 +67,7 @@ void Protocol::receive(void* buf) {
     msg.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
 
     // Notifica os observadores com o endereço de destino e a mensagem
-    _observed.notify(dst, msg);
+    _observed.notify(src, dst, msg);
 }
 
 

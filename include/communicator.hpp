@@ -18,10 +18,10 @@ public:
     ~Communicator();
 
     // Envia uma mensagem para o destino especificado
-    bool send(const Message* message, Address destination);
+    bool send(const Message* message, Ethernet::Address destination);
 
     // Recebe uma mensagem e coloca no parâmetro message
-    bool receive(Message* message);
+    bool receive(Message* message, Ethernet::Address* source);
 
 private:
     Protocol* _protocol;  // Ponteiro para o protocolo utilizado

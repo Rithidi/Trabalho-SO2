@@ -24,12 +24,12 @@ public:
     // Construtor
     Concurrent_Observer();
 
-    void update(Message message);
-    Message updated();
+    void update(Message message, Address src);
+    std::pair<Message, Address> updated();
 
 private:
     sem_t semaphore;
-    std::queue<Message> _message_buffer;
+    std::queue<std::pair<Message, Address>> _message_buffer;
     std::mutex mutex;
 };
 
@@ -37,7 +37,7 @@ class Concurrent_Observed {
 public:
     void attach(Concurrent_Observer* observer);
     void detach(Concurrent_Observer* observer);
-    void notify(Address adr, Message message);
+    void notify(Address src, Address dst, Message message);
 
 private:
     std::list<Concurrent_Observer*> observers;

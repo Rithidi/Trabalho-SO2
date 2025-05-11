@@ -231,8 +231,8 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
     const int NUM_MENSAGENS = totalMessages;
 
     // MACs fictícios
-    const Ethernet::Mac_Address MAC_VEICULO_A = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x01};
-    const Ethernet::Mac_Address MAC_VEICULO_B = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x02};
+    const Ethernet::Mac_Address MAC_VEICULO_A = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x02};
+    const Ethernet::Mac_Address MAC_VEICULO_B = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x03};
 
     // Identificadores de threads
     pthread_t receptor_a_id, receptor_b_id;
@@ -240,13 +240,12 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
     pthread_t b1_id, b2_id, b3_id;
 
     // Portas fictícias
-    const Ethernet::Port PORTA_RECEPTOR_A = 5001;
-    const Ethernet::Port PORTA_RECEPTOR_B = 5002;
+    const Ethernet::Port PORTA_RECEPTOR = 5001;
     const Ethernet::Port PORTA_ENVIADOR = 5000;
 
     // Endereços para os Receptores
-    Ethernet::Address endereco_receptor_a = {MAC_VEICULO_A, receptor_a_id, PORTA_RECEPTOR_A};
-    Ethernet::Address endereco_receptor_b = {MAC_VEICULO_B, receptor_b_id, PORTA_RECEPTOR_B};
+    Ethernet::Address endereco_receptor_a = {MAC_VEICULO_A, receptor_a_id, PORTA_RECEPTOR};
+    Ethernet::Address endereco_receptor_b = {MAC_VEICULO_B, receptor_b_id, PORTA_RECEPTOR};
 
     // Cria processo para Veículo A
     pid_t pid_a = fork();
@@ -254,7 +253,7 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
     if (pid_a == 0) {
         // Cria Veículo A e Receptor
         Veiculo veiculo_a(NETWORK_INTERFACE, "Veiculo A", MAC_VEICULO_A);
-        veiculo_a.cria_thread_receptor("Receptor A", MAC_VEICULO_A, receptor_a_id, PORTA_RECEPTOR_A, NUM_MENSAGENS * 3);
+        veiculo_a.cria_thread_receptor("Receptor A", MAC_VEICULO_A, receptor_a_id, PORTA_RECEPTOR, NUM_MENSAGENS * 3);
 
         // Espera um pouco para garantir que o receptor B esteja pronto
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -276,7 +275,7 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
     if (pid_b == 0) {
         // Cria Veículo B e Receptor
         Veiculo veiculo_b(NETWORK_INTERFACE, "Veiculo B", MAC_VEICULO_B);
-        veiculo_b.cria_thread_receptor("Receptor B", MAC_VEICULO_B, receptor_b_id, PORTA_RECEPTOR_B, NUM_MENSAGENS * 3);
+        veiculo_b.cria_thread_receptor("Receptor B", MAC_VEICULO_B, receptor_b_id, PORTA_RECEPTOR, NUM_MENSAGENS * 3);
 
         // Espera um pouco para garantir que o receptor A esteja pronto
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -294,6 +293,62 @@ int teste_comunicacao_externa(std::string networkInterface, int totalMessages) {
     
     // Processo pai espera todos os filhos
     while (wait(nullptr) > 0); // Espera todos os filhos terminarem
+
+    std::cout << "\n===============================" << std::endl;
+    std::cout << "✅ Teste finalizado." << std::endl;
+    std::cout << "===============================\n" << std::endl;
+    return 0;
+}
+
+
+// Teste de Broadcast Interno
+int teste_broadcast_interno(std::string networkInterface, int totalMessages) {
+    std::cout << "\n"
+          << "============================================================\n"
+          << "🧪  TESTE: Broadcast Interno\n"
+          << "------------------------------------------------------------\n"
+          << "📨 Enviador: e1 → 📬 Receptores: r1, r2, r3 \n"
+          << "============================================================\n"
+          << std::endl;
+
+    std::string NETWORK_INTERFACE = networkInterface;
+    const int NUM_MENSAGENS = totalMessages;
+
+    // MACs fictícios
+    const Ethernet::Mac_Address MAC_VEICULO_A = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x04};
+
+    // Identificadores de threads
+    pthread_t r1_id, r2_id, r3_id;
+    pthread_t e1_id;
+
+    // Portas fictícias
+    const Ethernet::Port PORTA_RECEPTOR = 5001;
+    const Ethernet::Port PORTA_ENVIADOR = 5000;
+
+    // Endereço incompleto para os Receptores
+    Ethernet::Address endereco_receptor;
+    // Inicializa os endereços dos Receptores sem ID do componente (thread_id)
+    endereco_receptor.vehicle_id = MAC_VEICULO_A;
+    endereco_receptor.port = PORTA_RECEPTOR;
+
+    // Cria Veículo A e Receptores
+    Veiculo veiculo_a(NETWORK_INTERFACE, "Veiculo A", MAC_VEICULO_A);
+    veiculo_a.cria_thread_receptor("Receptor 1", MAC_VEICULO_A, r1_id, PORTA_RECEPTOR, NUM_MENSAGENS);
+    veiculo_a.cria_thread_receptor("Receptor 2", MAC_VEICULO_A, r2_id, PORTA_RECEPTOR, NUM_MENSAGENS);
+    veiculo_a.cria_thread_receptor("Receptor 3", MAC_VEICULO_A, r3_id, PORTA_RECEPTOR, NUM_MENSAGENS);
+
+    // Espera um pouco para garantir que os receptores estejam prontos
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Cria Enviadores internos.
+    veiculo_a.cria_thread_enviador("Enviador 1", MAC_VEICULO_A, e1_id, PORTA_ENVIADOR, endereco_receptor, NUM_MENSAGENS);
+
+    // Espera os threads terminarem
+    pthread_join(r1_id, nullptr);
+    pthread_join(r2_id, nullptr);
+    pthread_join(r3_id, nullptr);
+    pthread_join(e1_id, nullptr);
+
 
     std::cout << "\n===============================" << std::endl;
     std::cout << "✅ Teste finalizado." << std::endl;

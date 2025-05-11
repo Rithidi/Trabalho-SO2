@@ -1,5 +1,6 @@
 #include "../include/observer.hpp"
 #include "../include/protocol.hpp"
+#include "../include/ethernet.hpp"
 
 
 #include <iostream>
@@ -9,25 +10,25 @@ Concurrent_Observer::Concurrent_Observer() {
     sem_init(&semaphore, 0, 0);  // Inicializa o semáforo com 0
 }
 
-void Concurrent_Observer::update(Message message) {
+void Concurrent_Observer::update(Message message, Address src) {
     mutex.lock();
-    _message_buffer.push(message);
+    _message_buffer.push({message, src});
     mutex.unlock();
 
     // Notifica que novos dados estão disponíveis
     sem_post(&semaphore);
 }
 
-Message Concurrent_Observer::updated() {
+std::pair<Message, Ethernet::Address> Concurrent_Observer::updated() {
     // Espera até que novos dados estejam disponíveis
     sem_wait(&semaphore);
 
     mutex.lock();
-    Message message = _message_buffer.front();
+    std::pair<Message, Ethernet::Address> item = _message_buffer.front();
     _message_buffer.pop();  // Remove o elemento da fila
     mutex.unlock();
 
-    return message;
+    return item;
 }
 
 void Concurrent_Observed::attach(Concurrent_Observer* observer) {
@@ -42,24 +43,26 @@ void Concurrent_Observed::detach(Concurrent_Observer* observer) {
     mutex.unlock();
 }
 
-void Concurrent_Observed::notify(Address adr, Message message) {
+void Concurrent_Observed::notify(Address src, Address dst, Message message) {
     mutex.lock();
     // Verifica se encaminha via BROADCAST INTERNO: (todos componentes na porta destino)
     // Nao possui ID do componente de destino ((thread_id) == (pthread_t)0)
-    if (pthread_equal(adr.component_id, (pthread_t)0)) {
+    if (pthread_equal(dst.component_id, (pthread_t)0)) {
+        std::cout << "Observer detectou: Broadcast interno (porta = " << dst.port << ")" << std::endl;
         for (Concurrent_Observer* obs : observers) {
             // Notifica todos os observadores associados a porta do endereco de destino.
-            if (obs->communicator_address.port == adr.port) {
-                obs->update(message);  // Atualiza o observador com os dados
+            if (obs->communicator_address.port == dst.port) {
+                obs->update(message, src);  // Atualiza o observador com os dados
             }
         }
     // Verifica se encaminha via DESTINO ESPECIFICO: (unico componente)
     // Possui ID do componente de destino ((thread_id) != (pthread_t)0)
     } else {
+        std::cout << "Observer detectou: Destino especifico (component_id = " << dst.component_id << ")" << std::endl;
         for (Concurrent_Observer* obs : observers) {
             // Notifica o observador associado ao ID e porta do endereco de destino.
-            if (obs->communicator_address.component_id == adr.component_id && obs->communicator_address.port == adr.port) {
-                obs->update(message);  // Atualiza o observador com os dados
+            if (obs->communicator_address.component_id == dst.component_id && obs->communicator_address.port == dst.port) {
+                obs->update(message, src);  // Atualiza o observador com os dados
                 break;  // Para de notificar após encontrar o observador correspondente
             }
         }

@@ -22,21 +22,24 @@ Communicator::~Communicator() {
     _protocol->detach(&observer);
 }
 
-bool Communicator::send(const Message* message, Address destination) {
+bool Communicator::send(const Message* message, Ethernet::Address destination) {
     // Envia a mensagem usando o protocolo
     return (_protocol->send(_address, destination, message->data(), message->size()) > 0);
 }
 
-bool Communicator::receive(Message* message) {
+bool Communicator::receive(Message* message, Ethernet::Address* source) {
     // Aguarda até que uma mensagem seja recebida
     // Chama o método updated() do observador para bloquear até receber uma mensagem
-    Message received_message = observer.updated();
-    
-    // Verifica se a mensagem recebida tem tamanho maior que zero.
-    if (received_message.size() == 0) {
-        return false;
-    }
+    std::pair<Message, Ethernet::Address> item = observer.updated();
 
+    // Extrai o endereço de origem da mensagem recebida
+    source->vehicle_id = item.second.vehicle_id;
+    source->component_id = item.second.component_id;
+    source->port = item.second.port;
+
+    // Extrai a mensagem recebida
+    Message received_message = item.first;
+    
     // Copia o conteúdo da mensagem recebida para a mensagem do comunicador.
     message->setData(received_message.data(), received_message.size());
 

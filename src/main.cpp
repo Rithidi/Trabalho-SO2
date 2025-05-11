@@ -1,4 +1,7 @@
-#include "../test/communication.cpp"
+//#include "../test/communication.cpp"
+
+#include "../test/internal_communication_test.cpp"
+
 
 #include <iostream>
 #include <string>
@@ -24,8 +27,13 @@ int main(int argc, char *argv[]) {
     std::cout << "Interface de rede: " << networkInterface << std::endl;
     std::cout << "Número total de mensagens: " << totalMessages << std::endl;
 
-    teste_comunicacao_interna(networkInterface, totalMessages);
-    teste_comunicacao_externa(networkInterface, totalMessages);
+    //teste_comunicacao_interna(networkInterface, totalMessages);
+    //teste_comunicacao_externa(networkInterface, totalMessages);
 
+    // SUBSTITUIDO PELOS NOVOS TESTES DE COMUNICACAO UTILIZANDO INTERESSE E RESPOSTA.
+    //teste_broadcast_interno(networkInterface, totalMessages);
+
+    internal_communication_test(networkInterface, totalMessages);
+    
     return 0;
 }
