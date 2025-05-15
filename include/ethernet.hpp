@@ -23,7 +23,7 @@ public:
     typedef unsigned short Port; // (2 bytes)
 
     struct Address { // (16 bytes)
-        Mac_Address vehicle_id = {0, 0, 0, 0, 0, 0}; // Endereço MAC (identificador do carro) (6 bytes) // // Inicializa com valor inexistente
+        Mac_Address vehicle_id = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // Endereço MAC (identificador do carro) (6 bytes) // // Inicializa com valor inexistente
         Thread_ID component_id = (pthread_t)0; // ID da thread (identificador do componente) (8 bytes) // Inicializa com valor inexistente
         Port port; // Porta (2 bytes)
     } __attribute__((packed));

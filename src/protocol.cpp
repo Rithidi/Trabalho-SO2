@@ -40,7 +40,7 @@ int Protocol::send(Address from, Address to, const void* data, unsigned int size
     // Verifica se o endereço MAC de origem e destino são iguais
     if (from.vehicle_id == to.vehicle_id) {
         is_internal = true; // Define como interno se os endereços forem iguais
-    } 
+    }
     
     // Envia o frame Ethernet
     return _nic->send(buf, is_internal);

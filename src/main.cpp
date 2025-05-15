@@ -1,11 +1,8 @@
-//#include "../test/communication.cpp"
-
 #include "../test/internal_communication_test.cpp"
-
+//#include "../test/external_communication_test.cpp"
 
 #include <iostream>
 #include <string>
-
 
 int main(int argc, char *argv[]) {
     // Definindo valores padrão
@@ -34,6 +31,7 @@ int main(int argc, char *argv[]) {
     //teste_broadcast_interno(networkInterface, totalMessages);
 
     internal_communication_test(networkInterface, totalMessages);
+    //external_communication_test(networkInterface, totalMessages);
     
     return 0;
 }

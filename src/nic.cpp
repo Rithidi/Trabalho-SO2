@@ -3,6 +3,7 @@
 #include "../include/observer.hpp"
 
 #include <iostream>
+#include <unistd.h>
 
 
 typedef Ethernet::Mac_Address Mac_Address;
@@ -22,13 +23,13 @@ NIC<Engine>::NIC(const std::string& interface)
       }, true)),
       internal_engine(std::make_unique<InternalEngine>(interface, [this](const void* data, size_t size) {
           this->receive(reinterpret_cast<const Frame*>(data), size);
-      }, true)),
-      mac_address({0}) { // Member initializer list ends here
+      }, true)) { // Member initializer list ends here
+    // Inicializa uma semente aleatória.
+    srand(getpid()); // Inicializa a semente com o PID do processo atual.
     // Generate a random MAC address
     for (auto& byte : mac_address) {
         byte = static_cast<uint8_t>(rand() % 256);
     }
-    stats = {0}; // Reset all statistics
 }
 
 // Destruidor da classe NIC

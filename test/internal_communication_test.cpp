@@ -5,7 +5,6 @@
 #include "../include/engine.hpp"
 
 #include "../test/vehicle.hpp"
-//#include "../test/component.hpp"
 
 #include <string>
 #include <pthread.h>
@@ -28,7 +27,10 @@ struct PontoLidar { // Coordenada Polar.
 // Funcao de rotina executada pela thread: componente Controlador.
 void* rotina_controlador(void* arg) {
     // Converte o argumento recebido para o tipo apropriado.
-    Componente* self = (Componente*)arg;
+    Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+
+    // Cria e inicializa Communicator.
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self(), dados->porta);
 
     // Intancia de mensagem.
     Message mensagem;
@@ -38,48 +40,48 @@ void* rotina_controlador(void* arg) {
     // Preenche mensagem com periodo de envio.
     mensagem.setData(reinterpret_cast<char*>(&periodo), sizeof(int));
     // Envia mensagem.
-    self->enviar_mensagem(&mensagem, {self->pegar_id_veiculo(), (pthread_t)0, SENSOR_TEMPERATURA});
-    std::cout << "📬 " << self->pegar_nome() << ": enviou interesse para o sensor de temperatura." << std::endl;
+    comunicador.send(&mensagem, {dados->id_veiculo, (pthread_t)0, SENSOR_TEMPERATURA});
+    std::cout << "📬 " << dados->nome << ": enviou interesse para o sensor de temperatura." << std::endl;
 
     // Envia mensagem de Interesse para o sensor lidar.
     periodo = 1000;
     // Preenche mensagem com periodo de envio.
     mensagem.setData(reinterpret_cast<char*>(&periodo), sizeof(int));
     // Envia mensagem.
-    self->enviar_mensagem(&mensagem, {self->pegar_id_veiculo(), (pthread_t)0, SENSOR_LIDAR});
-    std::cout << "📬 " << self->pegar_nome() << ": enviou interesse para o sensor lidar." << std::endl;
+    comunicador.send(&mensagem, {dados->id_veiculo, (pthread_t)0, SENSOR_LIDAR});
+    std::cout << "📬 " << dados->nome << ": enviou interesse para o sensor lidar." << std::endl;
 
     // Envia mensagem de Interesse para o sensor de camera.
     periodo = 6000;
     // Preenche mensagem com periodo de envio.
     mensagem.setData(reinterpret_cast<char*>(&periodo), sizeof(int));
     // Envia mensagem.
-    self->enviar_mensagem(&mensagem, {self->pegar_id_veiculo(), (pthread_t)0, SENSOR_CAMERA});
-    std::cout << "📬 " << self->pegar_nome() << ": enviou interesse para o sensor de camera." << std::endl;
+    comunicador.send(&mensagem, {dados->id_veiculo, (pthread_t)0, SENSOR_CAMERA});
+    std::cout << "📬 " << dados->nome << ": enviou interesse para o sensor de camera." << std::endl;
 
     while (true) {
         Ethernet::Address origem;
         // Espera recebimento de mensagens do sensor de temperatura.
-        self->recebe_mensagem(&mensagem, &origem);
+        comunicador.receive(&mensagem, &origem);
 
         // Identifica o tipo de dado recebido (através da porta de origem).
         if (origem.port == SENSOR_TEMPERATURA) {
             // Extrai dados da mensagem recebida.
             int dado = *(int*)mensagem.data();
-            std::cout << "📬 " << self->pegar_nome() << ": recebeu temperatura: " << dado << std::endl;
+            std::cout << "📬 " << dados->nome << ": recebeu temperatura: " << dado << std::endl;
         } else if (origem.port == SENSOR_LIDAR) {
             // Extrai dados da mensagem recebida.
             PontoLidar dado;
             memcpy(&dado, mensagem.data(), sizeof(PontoLidar));
-            std::cout << "📬 " << self->pegar_nome() << ": recebeu lidar: (" << dado.distancia << ", " << dado.angulo << ")" << std::endl;
+            std::cout << "📬 " << dados->nome << ": recebeu lidar: (" << dado.distancia << ", " << dado.angulo << ")" << std::endl;
         } else if (origem.port == SENSOR_CAMERA) {
             // Extrai dados da mensagem recebida.
             int dado = *(int*)mensagem.data();
-            std::cout << "📬 " << self->pegar_nome() << ": recebeu camera: foto " << dado << std::endl;
+            std::cout << "📬 " << dados->nome << ": recebeu camera: foto " << dado << std::endl;
         }
         //break;
     }
-    Componente* typedArg = static_cast<Componente*>(arg);
+    Veiculo::DadosComponente* typedArg = static_cast<Veiculo::DadosComponente*>(arg);
     delete typedArg;
     pthread_exit(NULL);
 }
@@ -87,7 +89,10 @@ void* rotina_controlador(void* arg) {
 // Funcao de rotina executada pela thread: componente Sensor Temperatura.
 void* rotina_sensor_temperatura(void* arg) {
     // Converte o argumento recebido para o tipo apropriado.
-    Componente* self = (Componente*)arg;
+    Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+
+    // Cria e inicializa Communicator.
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self(), dados->porta);
 
     // Define temperatura inicial.
     int temperatura = 25;
@@ -95,11 +100,11 @@ void* rotina_sensor_temperatura(void* arg) {
     // Espera receber mensagem de interesse de algum componente.
     Message mensagem;
     Ethernet::Address endereco_interessado;
-    self->recebe_mensagem(&mensagem, &endereco_interessado);
+    comunicador.receive(&mensagem, &endereco_interessado);
 
     // Identifica o tipo do interessado (através da porta de origem).
     if (endereco_interessado.port == CONTROLADOR) {
-        std::cout << "📬 " << self->pegar_nome() << ": recebeu interesse do controlador." << std::endl;
+        std::cout << "📬 " << dados->nome << ": recebeu interesse do controlador." << std::endl;
     }
 
     // Extrai periodo de envio da mensagem recebida.
@@ -113,14 +118,13 @@ void* rotina_sensor_temperatura(void* arg) {
         mensagem.setData(reinterpret_cast<char*>(&temperatura), sizeof(int));
         
         // Envia mensagem com dados do sensor de temperatura.
-        self->enviar_mensagem(&mensagem, endereco_interessado);
-        //std::cout << "📬 " << self->pegar_nome() << ": enviou temperatura: " << temperatura << std::endl;
+        comunicador.send(&mensagem, endereco_interessado);
 
         // Incrementa temperatura para o próximo envio.
         temperatura++;
         //break;
     }
-    Componente* typedArg = static_cast<Componente*>(arg);
+    Veiculo::DadosComponente* typedArg = static_cast<Veiculo::DadosComponente*>(arg);
     delete typedArg;
     pthread_exit(NULL);
 }
@@ -128,7 +132,10 @@ void* rotina_sensor_temperatura(void* arg) {
 // Funcao de rotina executada pela thread: componente Sensor LIDAR.
 void* rotina_sensor_lidar(void* arg) {
     // Converte o argumento recebido para o tipo apropriado.
-    Componente* self = (Componente*)arg;
+    Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+
+    // Cria e inicializa Communicator.
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self(), dados->porta);
 
     // Cria estrutura de dados do sensor LIDAR.
     PontoLidar ponto_lidar{0.0f, 0.0f};
@@ -136,11 +143,11 @@ void* rotina_sensor_lidar(void* arg) {
     // Espera receber mensagem de interesse de algum componente.
     Message mensagem;
     Ethernet::Address endereco_interessado;
-    self->recebe_mensagem(&mensagem, &endereco_interessado);
+    comunicador.receive(&mensagem, &endereco_interessado);
 
     // Identifica o tipo do interessado (através da porta de origem).
     if (endereco_interessado.port == CONTROLADOR) {
-        std::cout << "📬 " << self->pegar_nome() << ": recebeu interesse do controlador." << std::endl;
+        std::cout << "📬 " << dados->nome << ": recebeu interesse do controlador." << std::endl;
     }
 
     // Extrai periodo de envio da mensagem recebida.
@@ -154,15 +161,14 @@ void* rotina_sensor_lidar(void* arg) {
         mensagem.setData(reinterpret_cast<char*>(&ponto_lidar), sizeof(PontoLidar));
         
         // Envia mensagem com dados do sensor de temperatura.
-        self->enviar_mensagem(&mensagem, endereco_interessado);
-        //std::cout << "📬 " << self->pegar_nome() << ": enviou lidar: (" << ponto_lidar.distancia << ", " << ponto_lidar.angulo << ")" << std::endl;
+        comunicador.send(&mensagem, endereco_interessado);
 
         // Incrementa dados para o próximo envio.
         ponto_lidar.distancia += 0.1f;
         ponto_lidar.angulo += 0.1f;
         //break;
     }
-    Componente* typedArg = static_cast<Componente*>(arg);
+    Veiculo::DadosComponente* typedArg = static_cast<Veiculo::DadosComponente*>(arg);
     delete typedArg;
     pthread_exit(NULL);
 }
@@ -170,7 +176,10 @@ void* rotina_sensor_lidar(void* arg) {
 // Funcao de rotina executada pela thread: componente Camera.
 void* rotina_sensor_camera(void* arg) {
     // Converte o argumento recebido para o tipo apropriado.
-    Componente* self = (Componente*)arg;
+    Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+
+    // Cria e inicializa Communicator.
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self(), dados->porta);
 
     // Contador de fotos.
     int contador = 1;
@@ -178,11 +187,11 @@ void* rotina_sensor_camera(void* arg) {
     // Espera receber mensagem de interesse de algum componente.
     Message mensagem;
     Ethernet::Address endereco_interessado;
-    self->recebe_mensagem(&mensagem, &endereco_interessado);
+    comunicador.receive(&mensagem, &endereco_interessado);
 
     // Identifica o tipo do interessado (através da porta de origem).
     if (endereco_interessado.port == CONTROLADOR) {
-        std::cout << "📬 " << self->pegar_nome() << ": recebeu interesse do controlador." << std::endl;
+        std::cout << "📬 " << dados->nome << ": recebeu interesse do controlador." << std::endl;
     }
 
     // Extrai periodo de envio da mensagem recebida.
@@ -196,14 +205,13 @@ void* rotina_sensor_camera(void* arg) {
         mensagem.setData(reinterpret_cast<char*>(&contador), sizeof(int));
         
         // Envia mensagem com dados do sensor de temperatura.
-        self->enviar_mensagem(&mensagem, endereco_interessado);
-        //std::cout << "📬 " << self->pegar_nome() << ": enviou foto: " << contador << std::endl;
+        comunicador.send(&mensagem, endereco_interessado);
 
         // Incrementa contador de fotos para o próximo envio.
         contador++;
         //break;
     }
-    Componente* typedArg = static_cast<Componente*>(arg);
+    Veiculo::DadosComponente* typedArg = static_cast<Veiculo::DadosComponente*>(arg);
     delete typedArg;
     pthread_exit(NULL);
 }
@@ -221,13 +229,10 @@ int internal_communication_test(std::string networkInterface, int totalMessages)
           << std::endl;
 
     std::string NETWORK_INTERFACE = networkInterface;
-    const int NUM_MENSAGENS = totalMessages;
-
-    // Define endereco MAC ficticio para NIC do veiculo.
-    const Ethernet::Mac_Address MAC_VEICULO = {0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0x01};
+    //const int NUM_MENSAGENS = totalMessages;
 
     // Cria Veículo.
-    Veiculo veiculo(NETWORK_INTERFACE, MAC_VEICULO, "Veiculo");
+    Veiculo veiculo(NETWORK_INTERFACE, "Veiculo");
 
     // Adiciona componentes ao veículo.
     veiculo.criar_componente("Sensor Temperatura", SENSOR_TEMPERATURA, rotina_sensor_temperatura);
