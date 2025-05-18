@@ -3,25 +3,29 @@
 #include "message.hpp"
 #include "observer.hpp"
 #include "protocol.hpp"
+#include "ethernet.hpp"
+
 #include <array>
 
-using Address = Ethernet::Address;
-using Port = Ethernet::Port;
+using Mac_Address = Ethernet::Mac_Address;
 using Thread_ID = Ethernet::Thread_ID;
 
 class Communicator {
 public:
     // Construtor: inicializa o comunicador com o protocolo, endereço MAC e porta
-    Communicator(Protocol* protocol, std::array<uint8_t, 6> vehicle_id, Thread_ID component_id, Port port);
+    Communicator(Protocol* protocol, Mac_Address vehicle_id, Thread_ID component_id);
 
     // Destrutor: desanexa o observador do protocolo
     ~Communicator();
 
-    // Envia uma mensagem para o destino especificado
-    bool send(const Message* message, Ethernet::Address destination);
+    // Envia uma mensagem
+    bool send(const Message* message);
 
-    // Recebe uma mensagem e coloca no parâmetro message
-    bool receive(Message* message, Ethernet::Address* source);
+    // Recebe uma mensagem
+    bool receive(Message* message);
+
+    // Retorna se há mensagens disponíveis
+    bool hasMessage();
 
 private:
     Protocol* _protocol;  // Ponteiro para o protocolo utilizado

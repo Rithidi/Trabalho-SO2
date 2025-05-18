@@ -9,6 +9,8 @@
 
 using Protocol_Number = Ethernet::Protocol_Number;
 using Address = Ethernet::Address;
+using Type = Ethernet::Type;
+using Period = Ethernet::Period;
 
 class Protocol {
 public:
@@ -19,7 +21,7 @@ public:
     Protocol(NIC<Engine>* nic, Protocol_Number protocol_number);
     ~Protocol();
 
-    int send(Address from, Address to, const void* data, unsigned int size);
+    int send(Address from, Address to, Type type, Period period, const void* data, unsigned int size);
     void receive(void* buf);
     void attach(Concurrent_Observer* obs);
     void detach(Concurrent_Observer* obs);

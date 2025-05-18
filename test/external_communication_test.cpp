@@ -5,6 +5,7 @@
 #include "../include/engine.hpp"
 
 #include "../test/vehicle.hpp"
+#include <unistd.h>
 
 #include <string>
 #include <pthread.h>
@@ -12,154 +13,184 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-// Definindo identificadores para os tipos de dados.
-const unsigned short DETECTOR_VIZINHOS = 0x0001;
-const unsigned short GPS = 0x0002;
+// Define os Tipos
+Ethernet::Type TIPO_SENSOR_GPS = 888;
 
-// Estrutura de dados que o componente GPS fornce.
-struct DadosGPS {
-    double latitude;
-    double longitude;
+// Estrutura de dados produzida pelo Sensor GPS.
+struct DadosSensorGPS {
+    int numVeiculo;
+    float x;
+    float y;
 };
 
-// Funcao de rotina executada pela thread: componente DetectorVizinhos.
-void* rotina_detector_vizinhos(void* arg) {
-    // Converte o argumento recebido para o tipo apropriado.
+// Define os parametros do teste
+int NUM_VEICULOS = 2;            // Numero de veiculos por aparicao.
+int NUM_RESPOSTAS = 3;           // Numero de respostas por Sensor antes de finalizar.
+int NUM_APARICOES = 3;           // Numero de aparicoes.
+int INTERVALO_APARICAO = 2000;   // Intervalo de tempo (ms) entre as aparicoes. 
+int INTERVALO_INTERESSE = 500;   // Intervalo de tempo (ms) entre os envios de interesse do Detector.
+
+// Funcao de rotina executada pela thread: componente Detector Veiculos.
+void* rotina_detector_veiculos(void* arg) {
     Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self());
 
-    // Cria e inicializa Communicator.
-    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self(), dados->porta);
+    int num_respostas = 0;
+    int num_max_respostas = NUM_VEICULOS * NUM_APARICOES * NUM_RESPOSTAS;
 
-    // Intancia de mensagem.
-    Message mensagem;
+    while (num_respostas < num_max_respostas) {
+        // Prepara mensagem de interesse para o sensor gps.
+        Message mensagem;
 
-    // Envia mensagem de Interesse para os componentes GPS de veiculos diferentes (comunicacao externa).
-    int periodo = 1000; // Periodo de envio em milissegundos.
-    // Preenche mensagem com periodo de envio.
-    mensagem.setData(reinterpret_cast<char*>(&periodo), sizeof(int));
-    // Preenche endereco de destino apenas com a Porta referente ao componente GPS.
-    Ethernet::Address endereco_destino;
-    endereco_destino.port = GPS;
-    // Envia mensagem.
-    comunicador.send(&mensagem, endereco_destino);
-    std::cout << "📬 " << dados->nome << ": enviou interesse para os GPSs ao redor." << std::endl;
+        mensagem.setDstAddress({{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, (pthread_t)0});   // Deixa o endereco de destino vazio.
+        mensagem.setType(TIPO_SENSOR_GPS);  // Preenche tipo do dado
 
-    while (true) {
-        Ethernet::Address origem;
-        // Cria estrutura de dados GPS para receber dados.
-        DadosGPS dado;
-        // Espera recebimento de mensagens dos componentes GPS.
-        comunicador.receive(&mensagem, &origem);
+        // Preenche periodo de interesse.
+        mensagem.setPeriod(0); // Periodo = 0 => Ping (uma unica resposta).
 
-        // Identifica o tipo de dado recebido (através da porta de origem).
-        if (origem.port == GPS) {
-            // Extrai dados da mensagem recebida.
-            memcpy(&dado, mensagem.data(), sizeof(DadosGPS));
-            std::cout << "📬 " << dados->nome << ": recebeu posicao: (" << dado.latitude << ", " << dado.longitude << ")" << std::endl;
+        // Envia mensagem de interesse.
+        comunicador.send(&mensagem);
+        std::cout << "📬 " << dados->nome << ": enviou interesse." << std::endl;
+
+        // Espera intervalo de envio de interesses.
+        usleep(INTERVALO_INTERESSE * 1000);
+
+        // Processa mensagens recebidas.
+        while(comunicador.hasMessage()) {
+            Message mensagem;
+            comunicador.receive(&mensagem);
+            // Verifica se a mensagem recebida é resposta (id componente eh o do componente)
+            if (pthread_equal(mensagem.getDstAddress().component_id, pthread_self())) {
+                // Verifica tipo de resposta recebida.
+                if (mensagem.getType() == TIPO_SENSOR_GPS) {
+                    num_respostas++; // incrementa numero de respostas.
+                    // Extrai dado recebido.
+                    DadosSensorGPS posicao = *reinterpret_cast<DadosSensorGPS*>(mensagem.data());
+                    std::cout << "📬 " << dados->nome << ": detectou veiculo " << posicao.numVeiculo << " na posicao: (" << posicao.x << ", " << posicao.y << ")" << std::endl;
+                }
+            }
         }
-        //break;
     }
-    Veiculo::DadosComponente* typedArg = static_cast<Veiculo::DadosComponente*>(arg);
-    delete typedArg;
+
+    // Informa que terminou de receber todas as respostas.
+    //std::cout << "📬 " << dados->nome << ": recebeu TODAS SUAS RESPOSTAS." << std::endl;
+
+    delete dados;
     pthread_exit(NULL);
 }
 
-// Funcao de rotina executada pela thread: componente GPS.
-void* rotina_gps(void* arg) {
-    // Converte o argumento recebido para o tipo apropriado.
+// Funcao de rotina executada pela thread: componente Sensor GPS.
+void* rotina_sensor_gps(void* arg) {
     Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self());
 
-    // Cria e inicializa Communicator.
-    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self(), dados->porta);
+    DadosSensorGPS posicao;
+    posicao.numVeiculo = dados->nome.back() - '0';;
+    posicao.x = 0;
+    posicao.y = 0;
 
-    // Cria estrutura de dados do GPS.
-    DadosGPS posicao{0.0, 0.0};
+    int num_respostas_enviadas = 0;
 
-    // Espera receber mensagem de interesse de algum componente.
-    Message mensagem;
-    Ethernet::Address endereco_interessado;
-    comunicador.receive(&mensagem, &endereco_interessado);
+    while (num_respostas_enviadas < NUM_RESPOSTAS) {
+        // Verifica se recebeu mensagem.
+        if (comunicador.hasMessage()) {
+            Message mensagem;
+            comunicador.receive(&mensagem);
 
-    // Identifica o tipo do interessado (através da porta de origem).
-    if (endereco_interessado.port == DETECTOR_VIZINHOS) {
-        std::cout << "📬 " << dados->nome << ": recebeu interesse do detector de vizinhos." << std::endl;
+            // Verifica se a mensagem eh de interesse (nao preencheu id componente no endereco de destino).
+            if (pthread_equal(mensagem.getDstAddress().component_id, (pthread_t)0)) {
+                // Verifica se a mensagem de interesse eh para ele.
+                if (mensagem.getType() == TIPO_SENSOR_GPS) {
+                    //std::cout << "📬 " << dados->nome << ": recebeu interesse." << std::endl;
+                    // Responde a mensagem.
+                    mensagem.setDstAddress(mensagem.getSrcAddress());
+                    mensagem.setData(reinterpret_cast<DadosSensorGPS*>(&posicao), sizeof(DadosSensorGPS));
+                    comunicador.send(&mensagem);
+                    //std::cout << "📬 " << dados->nome << ": Enviou posicao." << std::endl;
+                    
+                    num_respostas_enviadas++;
+                    // Incrementa posicao.
+                    posicao.x++;
+                    posicao.y++;
+                }
+            }
+        }
     }
 
-    // Extrai periodo de envio da mensagem recebida.
-    int periodo = *reinterpret_cast<int*>(mensagem.data());
-    
-    // Envia periodicamente seus dados para o solicitante.
-    while (true) {
-        // Espera o periodo definido.
-        std::this_thread::sleep_for(std::chrono::milliseconds(periodo));
-        // Preenche mensagem com dados de posicao do GPS.
-        mensagem.setData(reinterpret_cast<char*>(&posicao), sizeof(DadosGPS));
-        
-        // Envia mensagem com dados de posicao.
-        comunicador.send(&mensagem, endereco_interessado);
+    // Informa que finalizou seus envios.
+    //std::cout << "📬 " << dados->nome << ": enviou TODAS SUAS RESPOSTAS." << std::endl;
 
-        // Incrementa dados para o próximo envio.
-        posicao.latitude += 0.1;
-        posicao.longitude += 0.1;
-        //break;
-    }
-    Veiculo::DadosComponente* typedArg = static_cast<Veiculo::DadosComponente*>(arg);
-    delete typedArg;
+    delete dados;
     pthread_exit(NULL);
 }
 
-// Funcao de teste de comunicação entre componentes de veículos diferentes (externa)
-int external_communication_test(std::string networkInterface, int totalMessages) {
-    std::cout << "\n============================================================\n"
-          << "🚗  TESTE: Comunicação entre componentes de veículos diferentes (externa)\n"
+
+void* rotina(void* arg) {
+    Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
+    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self());
+
+    sleep(10);
+    delete dados;
+    pthread_exit(NULL);
+}
+
+// Funcao de teste de comunicação externa.
+int external_communication_test(std::string networkInterface) {
+    std::cout << "\n"
+          << "============================================================\n"
+          << "🧪  TESTE: Reconhecimento e Comunicação entre componentes de diferentes veículos (externa)\n"
           << "------------------------------------------------------------\n"
-          << "Veiculo 0 está buscando os veículos vizinhos ao seu redor:\n"
-          << "Componente DetectorVizinhos requisita dados aos componentes GPS dos outros veiculos.\n"
-          << "\n============================================================\n"
+          << " Veículo 1 detecta veiculos proximos a ele:\n"
+          << " Detector de Veiculos requisita dados aos Sensores GPS.\n"
+          << "============================================================\n"
           << std::endl;
 
-    std::string NETWORK_INTERFACE = networkInterface;
-    //const int NUM_MENSAGENS = totalMessages;
-
-    // Cria 10 processos para os veiculos que fornecem sua localizacao.
-    for (int i = 0; i < 10; ++i) {
-        pid_t pid = fork();
-
-        // Código dos processos dos veiculos que fornecem sua localizacao.
-        if (pid == 0) {
-        // Cria Veículo.
-        Veiculo veiculo(NETWORK_INTERFACE, "Veiculo " + std::to_string(i + 1));
-        // Adiciona componentes ao veículo.
-        veiculo.criar_componente("GPS " + std::to_string(i + 1), GPS, rotina_gps);
-        // Espera as threads componente terminarem.
-        veiculo.~Veiculo();
-        _exit(0); // Finaliza o processo criado.
-        }
-
-    }  // Processo Pai continua o loop para criar o próximo processo.
-
-    // Espera todos os componentes GPS estarem prontos para receber mensagem.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Cria processo para o veiculo com componente DetectorDeVizinhos.
+    // Define o valor dos parametros do teste
+    NUM_VEICULOS = 2;            // Numero de veiculos por aparicao.
+    NUM_RESPOSTAS = 3;           // Numero de respostas por Sensor antes de finalizar.
+    NUM_APARICOES = 3;           // Numero de aparicoes.
+    INTERVALO_APARICAO = 1000;   // Intervalo de tempo (ms) entre as aparicoes. 
+    INTERVALO_INTERESSE = 500;   // Intervalo de tempo (ms) entre os envios de interesse do Detector.
+    
+    // Cria Processo.
     pid_t pid = fork();
-    
-    // Código do processo do veiculo detector.
+
     if (pid == 0) {
-        // Cria Veículo.
-        Veiculo veiculo(NETWORK_INTERFACE, "Veiculo 0");
-        // Adiciona componentes ao veículo.
-        veiculo.criar_componente("Detector", DETECTOR_VIZINHOS, rotina_detector_vizinhos);
-        // Espera as threads componente terminarem.
-        veiculo.~Veiculo();
-        _exit(0); // Finaliza o processo criado.
+        // Cria Veículo 1.
+        Veiculo veiculo(networkInterface, "Veiculo 0");
+        // Adiciona componente detector ao veiculo 1.
+        veiculo.criar_componente("Detector Veiculos", rotina_detector_veiculos);
+        return 0;
     }
-    
-    // Processo pai espera todos os filhos
-    while (wait(nullptr) > 0); // Espera todos os filhos terminarem
+
+    int cont_veiculos = 1;
+
+    // Logica de aparicao de novos veiculos.
+    for (int i = 0; i < NUM_APARICOES; i++) {
+        // Espera periodo de tempo aleatorio para criar novos veiculos.
+        std::this_thread::sleep_for(std::chrono::milliseconds(INTERVALO_APARICAO));
+        // Cria novos Processos.
+        for (int i = 0; i < NUM_VEICULOS; i++) {
+            pid_t pid = fork();
+
+            if (pid == 0) {
+                // Cria Veículo.
+                Veiculo veiculo(networkInterface, "Veiculo " + std::to_string(cont_veiculos));
+                // Adiciona componente sensor gps.
+                veiculo.criar_componente("Sensor GPS Veiculo " + std::to_string(cont_veiculos), rotina_sensor_gps);
+                std::cout << "*Veiculo " << cont_veiculos << " adicionado" << std::endl;
+                return 0;
+            }
+            cont_veiculos++;
+        }
+    }
+
+    // Espera todos os processos filhos terminarem
+    while (wait(NULL) > 0);
 
     std::cout << "\n===============================" << std::endl;
     std::cout << "✅ Teste finalizado." << std::endl;
     std::cout << "===============================\n" << std::endl;
+
     return 0;
 }

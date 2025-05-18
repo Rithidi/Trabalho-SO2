@@ -10,28 +10,20 @@ int main(int argc, char *argv[]) {
     int totalMessages;  // Valor padrão
 
     // Verificando se o número de argumentos passados é válido
-    if (argc < 3) {
+    if (argc < 2) {
         std::cout << "Erro: Por favor, forneça os parâmetros corretamente." << std::endl;
-        std::cout << "Uso: " << argv[0] << " <network-interface> <total-messages>" << std::endl;
+        std::cout << "Uso: " << argv[0] << " <network-interface>" << std::endl;
         return 1;
     }
 
     // Lendo os parâmetros diretamente da linha de comando
     networkInterface = argv[1];  // Primeiro argumento: interface de rede
-    totalMessages = std::atoi(argv[2]);  // Segundo argumento: número total de mensagens
 
     // Mostrando os valores recebidos
     std::cout << "Interface de rede: " << networkInterface << std::endl;
-    std::cout << "Número total de mensagens: " << totalMessages << std::endl;
 
-    //teste_comunicacao_interna(networkInterface, totalMessages);
-    //teste_comunicacao_externa(networkInterface, totalMessages);
-
-    // SUBSTITUIDO PELOS NOVOS TESTES DE COMUNICACAO UTILIZANDO INTERESSE E RESPOSTA.
-    //teste_broadcast_interno(networkInterface, totalMessages);
-
-    internal_communication_test(networkInterface, totalMessages);
-    //external_communication_test(networkInterface, totalMessages);
+    internal_communication_test(networkInterface);
+    //external_communication_test(networkInterface);
     
     return 0;
 }

@@ -50,15 +50,9 @@ const Mac_Address& NIC<Engine>::get_address() const {
 
 // Aloca um buffer para armazenar um frame Ethernet
 template <typename Engine>
-typename NIC<Engine>::Buffer* NIC<Engine>::alloc(Address dst, Protocol_Number prot, unsigned int size) {
-    if (size > 1500) {
-        return nullptr;  // Retorna nullptr se o tamanho exceder o MTU
-    }
-
-    // Cria um novo buffer para o frame Ethernet
-    Buffer* buffer = new Buffer();
-    buffer->size = size;  // Define o tamanho do frame
-
+typename NIC<Engine>::Buffer* NIC<Engine>::alloc() {
+    Buffer* buffer = new Buffer();  // Cria um novo buffer para o frame Ethernet
+    buffer->size = sizeof(Ethernet::Frame); // Define o tamanho do buffer para 1500 bytes.
     return buffer;  // Retorna o ponteiro para o buffer alocado
 }
 

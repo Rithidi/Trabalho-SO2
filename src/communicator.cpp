@@ -1,17 +1,16 @@
 #include "../include/communicator.hpp"
+#include "../include/message.hpp"
 
-Communicator::Communicator(Protocol* protocol, std::array<uint8_t, 6> vehicle_id, Thread_ID component_id, Port port)
+Communicator::Communicator(Protocol* protocol, Mac_Address vehicle_id, Thread_ID component_id)
     : _protocol(protocol) 
 {
-    // Inicializa o endereço MAC, identificador do componente e porta do comunicador.
+    // Inicializa endereço do comunicador: identificador do veiculo (MAC da nic) e identificador do componente.
     _address.vehicle_id = vehicle_id;
     _address.component_id = component_id;
-    _address.port = port;
     
     // Inicializa o observador com o endereço do comunicador
     observer.communicator_address.vehicle_id = vehicle_id;
     observer.communicator_address.component_id = component_id;
-    observer.communicator_address.port = port;
 
     // Adiciona o observador à lista de observadores do protocolo
     _protocol->attach(&observer);
@@ -22,26 +21,30 @@ Communicator::~Communicator() {
     _protocol->detach(&observer);
 }
 
-bool Communicator::send(const Message* message, Ethernet::Address destination) {
+bool Communicator::send(const Message* message) {
     // Envia a mensagem usando o protocolo
-    return (_protocol->send(_address, destination, message->data(), message->size()) > 0);
+    return (_protocol->send(_address, message->getDstAddress(), message->getType(),
+                            message->getPeriod(), message->data(), message->size()) > 0);
 }
 
-bool Communicator::receive(Message* message, Ethernet::Address* source) {
+bool Communicator::receive(Message* message) {
     // Aguarda até que uma mensagem seja recebida
     // Chama o método updated() do observador para bloquear até receber uma mensagem
-    std::pair<Message, Ethernet::Address> item = observer.updated();
+    Message received_message = observer.updated();
 
-    // Extrai o endereço de origem da mensagem recebida
-    source->vehicle_id = item.second.vehicle_id;
-    source->component_id = item.second.component_id;
-    source->port = item.second.port;
-
-    // Extrai a mensagem recebida
-    Message received_message = item.first;
+    // Extrai o cabeçalho da mensagem recebida
+    message->setSrcAddress(received_message.getSrcAddress());
+    message->setDstAddress(received_message.getDstAddress());
+    message->setType(received_message.getType());
+    message->setPeriod(received_message.getPeriod());
     
     // Copia o conteúdo da mensagem recebida para a mensagem do comunicador.
     message->setData(received_message.data(), received_message.size());
 
     return true;
+}
+
+bool Communicator::hasMessage() {
+    // Verifica se há mensagens disponíveis no observador
+    return observer.hasMessage();
 }
