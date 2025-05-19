@@ -1,42 +1,101 @@
+# 📚 Biblioteca de Comunicação entre Veículos Autônomos
+
+Este projeto implementa uma biblioteca de comunicação segura e confiável para componentes de veículos autônomos. A biblioteca utiliza os conceitos de observação, protocolos personalizados e comunicação assíncrona com suporte a múltiplas threads e processos.
+
+
+# 📦 Estrutura do Projeto
+
+├── include/        # Arquivos de cabeçalho (Communicator, Message, Protocol, NIC, etc.)
+├── src/            # Implementações das classes
+├── tests/          # Testes práticos de comunicação interna e externa
+├── Makefile        # Script para compilação
+
 
 # Pré-requisitos:
 
-    1. makefile: Para compilar o código. Para instalar o makefile, use o seguinte comando:
-    Para Ubuntu/Debian: sudo apt install make
+    1.Makefile: Utilizado para compilar o projeto de forma automatizada.
 
-    2. g++: Compilador do C++. Para instalar o g++, use o seguinte comando:
-    Para Ubuntu/Debian: sudo apt install g++
+    2. g++: Compilador do C++.
 
 
-# Como usar:
+# 🛠️ Compilação
 
-    1. Compilando o programa
-    Primeiro, você precisa compilar o programa. Para isso, execute o seguinte comando no diretório raiz do projeto:
+No diretório raiz do projeto, execute: make
 
-        make
+Esse comando irá compilar todos os testes localizados em ./tests/, gerando executáveis com o mesmo nome dos arquivos de teste, por exemplo:
 
-    2. Executando o programa
-    Depois de compilar o programa, execute-o com o seguinte comando, também no diretório raiz:
+-> internal_communication_test
 
-        sudo ./main.exe <network_interface> <totalMessages>
+-> external_communication_test
 
-    onde: 
-    <network_interface>: Nome da interface de rede que você deseja usar (por exemplo, eth0, wlan0, etc.).
-
-    <totalMessages>: O número total de mensagens que cada componente Enviador irá enviar no teste.
+Para compilar um teste especifico, utilize: make nome_teste
 
 
-# Exemplo de execução:
+# ⚙️ Executar um teste
 
-    sudo ./main.exe eth0 10
+Após a compilação, execute o teste desejado com:
 
-    Esse comando executará o programa na interface de rede eth0 e cada componente Enviador enviará 10 mensagens.
+sudo ./<nome_teste> <interface_de_rede> [parâmetros_opcionais]
 
 
-# Testes:
+# ✅ Testes Disponíveis
 
-    1. Teste de Comunicação Interna:
-    Este teste tem como objetivo validar a comunicação entre componentes de um único veículo, onde os Enviadores a1, b1, c1 enviam mensagens para o componente Receptor 1. Enquanto os Enviadores a2, b2, c2 enviam mensagens para o componente Receptor 2, também no veículo A. Todos os componentes (Enviadores e Receptor) são operados por threads POSIX dentro do mesmo processo.
+1️⃣ Comunicação Interna (internal_communication_test)
+Valida a comunicação entre componentes dentro do mesmo veículo. Cada Controlador envia requisições periódicas aos Sensores de Temperatura, que respondem com dados simulados.
 
-    2. Teste de Comunicação Externa:
-    Este teste tem como objetivo validar a comunicação entre componentes de veículos distintos, onde os Enviadores a1, a2, a3 do Veículo A enviam mensagens para o componente Receptor do Veículo B. Equanto os Enviadores b1, b2, b3 do Veículo B enviam mensagens para o componente Receptor do Veículo A. A comunicação é realizada por meio de processos independentes, criados com fork(), e cada componente (Enviador ou Receptor) é operado por uma thread POSIX.
+    🧵 Componentes
+    Controlador (thread): Envia interesses e processa mensagens de temperatura.
+
+    Sensor de Temperatura (thread): Responde com dados simulados.
+
+    Veículo (classe): Instancia os componentes.
+
+    🔧 Como Executar
+
+    sudo ./internal_communication_test <interface> [num_controladores] [num_sensores] [num_respostas] [periodo_min] [periodo_max]
+
+    <interface>: Interface de rede (ex: eth0, wlan0)
+
+    [num_controladores]: (Opcional) Quantidade de controladores (padrão: 10)
+
+    [num_sensores]: (Opcional) Quantidade de sensores (padrão: 9)
+
+    [num_respostas]: (Opcional) Respostas esperadas por controlador (padrão: 10)
+
+    [periodo_min]: (Opcional) Período mínimo em ms (padrão: 1)
+
+    [periodo_max]: (Opcional) Período máximo em ms (padrão: 100)
+
+    Exemplo:
+
+    sudo ./internal_communication_test eth0 5 3 10 10 100
+
+2️⃣ Comunicação Externa (external_communication_test)
+Simula a interação entre veículos diferentes. Um Detector de Veículos envia requisições periódicas para sensores GPS de outros veículos, que respondem com suas posições.
+
+    🧵 Componentes
+    Detector de Veículos (thread): Solicita dados de posição a sensores GPS.
+
+    Sensor GPS (thread): Responde com dados de posição simulados: (x, y).
+
+    Veículo (classe): Instancia os componentes.
+
+    🔧 Como Executar
+
+    sudo ./external_communication_test <interface> [num_veiculos] [num_respostas] [num_aparicoes] [intervalo_aparicao_ms] [intervalo_interesse_ms]
+
+    <interface>: Interface de rede (ex: eth0, lo, tap0)
+
+    [num_veiculos]: (Opcional) Quantidade de veículos por aparição (padrão: 2)
+
+    [num_respostas]: (Opcional) Respostas por sensor (padrão: 3)
+
+    [num_aparicoes]: (Opcional) Total de aparições (padrão: 3)
+
+    [intervalo_aparicao_ms]: (Opcional) Tempo entre aparições (padrão: 1000)
+
+    [intervalo_interesse_ms]: (Opcional) Tempo entre envios de interesse (padrão: 500)
+
+    Exemplo:
+
+    sudo ./external_communication_test tap0 2 3 3 1000 500

@@ -1,34 +1,29 @@
-# Compilador
+# Compilador e flags
 CXX := g++
-
-# Flags de compilação
 CXXFLAGS := -std=c++17 -pthread -I./include
 LDFLAGS := -pthread
 
 # Diretórios
 SRC_DIR := ./src
-INC_DIR := ./include
-TARGET := main.exe
+TEST_DIR := ./test
 
-# Lista todos os arquivos .cpp
-SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+# Arquivos-fonte do projeto principal
+SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
 
-# Interface de rede (pode ser passada como argumento ao make)
-NETWORK_INTERFACE ?= "enp7s0"
+# Lista de testes (adicione aqui os nomes dos arquivos de teste sem .cpp)
+TESTS := internal_communication_test external_communication_test
 
-# Número total de mensagens (pode ser passado como argumento ao make)
-TOTAL_MESSAGES ?= 1000
+# Regra principal: compila todos os testes
+all: $(TESTS)
 
-# Regra principal: compila diretamente para o executável
-$(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DNETWORK_INTERFACE=$(NETWORK_INTERFACE) -DTOTAL_MESSAGES=$(TOTAL_MESSAGES) $^ -o $@
-	@echo "Executável criado: $(TARGET)"
+# Regra para compilar cada teste individual
+$(TESTS): %: $(TEST_DIR)/%.cpp $(SRC_FILES)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	@echo "Executável criado: $@"
 
-# Limpeza
+# Limpa os executáveis de teste
 clean:
-	rm -f $(TARGET)
-	@echo "Executável removido"
+	rm -f $(TESTS)
+	@echo "Executáveis de teste removidos"
 
-.PHONY: all clean
-
-all: $(TARGET)
+.PHONY: all clean $(TESTS)

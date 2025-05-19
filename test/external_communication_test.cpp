@@ -4,7 +4,7 @@
 #include "../include/protocol.hpp"
 #include "../include/engine.hpp"
 
-#include "../test/vehicle.hpp"
+#include "../include/vehicle.hpp"
 #include <unistd.h>
 
 #include <string>
@@ -27,7 +27,7 @@ struct DadosSensorGPS {
 int NUM_VEICULOS = 2;            // Numero de veiculos por aparicao.
 int NUM_RESPOSTAS = 3;           // Numero de respostas por Sensor antes de finalizar.
 int NUM_APARICOES = 3;           // Numero de aparicoes.
-int INTERVALO_APARICAO = 2000;   // Intervalo de tempo (ms) entre as aparicoes. 
+int INTERVALO_APARICAO = 1000;   // Intervalo de tempo (ms) entre as aparicoes. 
 int INTERVALO_INTERESSE = 500;   // Intervalo de tempo (ms) entre os envios de interesse do Detector.
 
 // Funcao de rotina executada pela thread: componente Detector Veiculos.
@@ -135,22 +135,50 @@ void* rotina(void* arg) {
 }
 
 // Funcao de teste de comunicação externa.
-int external_communication_test(std::string networkInterface) {
-    std::cout << "\n"
-          << "============================================================\n"
-          << "🧪  TESTE: Reconhecimento e Comunicação entre componentes de diferentes veículos (externa)\n"
-          << "------------------------------------------------------------\n"
-          << " Veículo 1 detecta veiculos proximos a ele:\n"
-          << " Detector de Veiculos requisita dados aos Sensores GPS.\n"
-          << "============================================================\n"
-          << std::endl;
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        std::cout << "Erro: Por favor, informe a interface de rede.\n";
+        std::cout << "Uso: " << argv[0] << " <network-interface> [num_veiculos] [num_respostas] [num_aparicoes] [intervalo_aparicao_ms] [intervalo_interesse_ms]\n";
+        return 1;
+    }
 
-    // Define o valor dos parametros do teste
-    NUM_VEICULOS = 2;            // Numero de veiculos por aparicao.
-    NUM_RESPOSTAS = 3;           // Numero de respostas por Sensor antes de finalizar.
-    NUM_APARICOES = 3;           // Numero de aparicoes.
-    INTERVALO_APARICAO = 1000;   // Intervalo de tempo (ms) entre as aparicoes. 
-    INTERVALO_INTERESSE = 500;   // Intervalo de tempo (ms) entre os envios de interesse do Detector.
+    std::string networkInterface = argv[1];
+
+    // Função auxiliar para ler int de argv com fallback para valor default
+    auto parse_arg = [&](int index, int default_val) -> int {
+        if (argc > index) {
+            try {
+                return std::stoi(argv[index]);
+            } catch (...) {
+                std::cout << "Aviso: parâmetro " << index << " inválido. Usando valor padrão " << default_val << ".\n";
+            }
+        }
+        return default_val;
+    };
+
+    NUM_VEICULOS = parse_arg(2, NUM_VEICULOS);
+    NUM_RESPOSTAS = parse_arg(3, NUM_RESPOSTAS);
+    NUM_APARICOES = parse_arg(4, NUM_APARICOES);
+    INTERVALO_APARICAO = parse_arg(5, INTERVALO_APARICAO);
+    INTERVALO_INTERESSE = parse_arg(6, INTERVALO_INTERESSE);
+
+    std::cout << "\n"
+              << "============================================================\n"
+              << "🧪  TESTE: Reconhecimento e Comunicação entre componentes de diferentes veículos (externa)\n"
+              << "------------------------------------------------------------\n"
+              << " Veículo 1 detecta veiculos proximos a ele:\n"
+              << " Detector de Veiculos requisita dados aos Sensores GPS.\n"
+              << "============================================================\n"
+              << std::endl;
+
+    // Imprime os parâmetros que serão usados no teste
+    std::cout << "Parâmetros do teste:\n";
+    std::cout << " Interface de rede: " << networkInterface << "\n";
+    std::cout << " Número de veículos: " << NUM_VEICULOS << "\n";
+    std::cout << " Número de respostas: " << NUM_RESPOSTAS << "\n";
+    std::cout << " Número de aparições: " << NUM_APARICOES << "\n";
+    std::cout << " Intervalo entre aparições (ms): " << INTERVALO_APARICAO << "\n";
+    std::cout << " Intervalo entre interesses (ms): " << INTERVALO_INTERESSE << "\n\n";
     
     // Cria Processo.
     pid_t pid = fork();
