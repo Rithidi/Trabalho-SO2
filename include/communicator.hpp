@@ -27,6 +27,9 @@ public:
     // Retorna se há mensagens disponíveis
     bool hasMessage();
 
+    Concurrent_Observer* getObserver();
+    
+
 private:
     Protocol* _protocol;  // Ponteiro para o protocolo utilizado
     Address _address;     // Endereço (MAC e Porta) do comunicador

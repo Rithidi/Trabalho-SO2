@@ -84,6 +84,13 @@ void* rotina_sensor_gps(void* arg) {
     Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
     Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self());
 
+    // Configura tipos de dados que o componente pode fornecer.
+    std::vector<Ethernet::Type> tipos;
+    tipos.push_back(TIPO_SENSOR_GPS);
+
+    // Se inscreve no DataPublisher para receber mensagens de interesse nos seus tipos de dados.
+    dados->data_publisher->subscribe(comunicador.getObserver(), &tipos);
+
     DadosSensorGPS posicao;
     posicao.numVeiculo = dados->nome.back() - '0';;
     posicao.x = 0;
@@ -96,23 +103,20 @@ void* rotina_sensor_gps(void* arg) {
         if (comunicador.hasMessage()) {
             Message mensagem;
             comunicador.receive(&mensagem);
-
+            
             // Verifica se a mensagem eh de interesse (nao preencheu id componente no endereco de destino).
             if (pthread_equal(mensagem.getDstAddress().component_id, (pthread_t)0)) {
-                // Verifica se a mensagem de interesse eh para ele.
-                if (mensagem.getType() == TIPO_SENSOR_GPS) {
-                    //std::cout << "📬 " << dados->nome << ": recebeu interesse." << std::endl;
-                    // Responde a mensagem.
-                    mensagem.setDstAddress(mensagem.getSrcAddress());
-                    mensagem.setData(reinterpret_cast<DadosSensorGPS*>(&posicao), sizeof(DadosSensorGPS));
-                    comunicador.send(&mensagem);
-                    //std::cout << "📬 " << dados->nome << ": Enviou posicao." << std::endl;
-                    
-                    num_respostas_enviadas++;
-                    // Incrementa posicao.
-                    posicao.x++;
-                    posicao.y++;
-                }
+                // Responde a mensagem.
+                mensagem.setDstAddress(mensagem.getSrcAddress());
+                mensagem.setData(reinterpret_cast<DadosSensorGPS*>(&posicao), sizeof(DadosSensorGPS));
+                comunicador.send(&mensagem);
+                //std::cout << "📬 " << dados->nome << ": Enviou posicao." << std::endl;
+                
+                num_respostas_enviadas++;
+                // Incrementa posicao.
+                posicao.x++;
+                posicao.y++;
+            
             }
         }
     }

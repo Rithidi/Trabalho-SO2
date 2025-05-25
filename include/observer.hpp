@@ -48,12 +48,8 @@ private:
 
 class Conditional_Data_Observer {
 public:
-    //typedef NIC<Engine>::Buffer Buffer;
-
     Protocol_Number protocol_number;
-
     Conditional_Data_Observer(Protocol* protocol, Protocol_Number protocol_number);
-
     void update(void* buffer);
 
 private:
@@ -62,8 +58,6 @@ private:
 
 class Conditional_Data_Observed {
 public:
-    //typedef NIC<Engine>::Buffer Buffer;
-
     void attach(Conditional_Data_Observer* obs);
     void detach(Conditional_Data_Observer* obs);
     void notify(Protocol_Number protocol_number, void* buffer);

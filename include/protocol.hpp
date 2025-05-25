@@ -6,11 +6,15 @@
 #include "nic.hpp"
 #include "ethernet.hpp"
 #include "message.hpp"
+#include "data_publisher.hpp"
 
 using Protocol_Number = Ethernet::Protocol_Number;
 using Address = Ethernet::Address;
 using Type = Ethernet::Type;
 using Period = Ethernet::Period;
+
+// Forward declaration para evitar inclusão circular
+class DataPublisher; 
 
 class Protocol {
 public:
@@ -18,7 +22,7 @@ public:
 
     Protocol_Number protocol_number;
 
-    Protocol(NIC<Engine>* nic, Protocol_Number protocol_number);
+    Protocol(NIC<Engine>* nic, DataPublisher* data_publisher, Protocol_Number protocol_number);
     ~Protocol();
 
     int send(Address from, Address to, Type type, Period period, const void* data, unsigned int size);
@@ -28,6 +32,7 @@ public:
 
 private:
     NIC<Engine>* _nic;
+    DataPublisher* _data_publisher;
     Conditional_Data_Observer _data_observer;
     Concurrent_Observed _observed;
 };

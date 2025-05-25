@@ -5,7 +5,6 @@
 #include "../include/nic.hpp"
 #include "../include/protocol.hpp"
 #include "../include/engine.hpp"
-#include "../include/agendador.hpp"
 
 #include <string>
 #include <pthread.h>
@@ -18,9 +17,9 @@ class Veiculo {
 public:
     // Estrutura para armazenar os dados que serão passados para cada thread componente
     struct DadosComponente {
-        Agendador* agendador;       // Ponteiro para o agendador usado pelo veículo
-        Protocol* protocolo;         // Ponteiro para o protocolo de comunicação do veículo
-        const std::string nome;      // Nome do componente/thread
+        DataPublisher* data_publisher;   // Ponteiro para o DataPublisher do veículo.
+        Protocol* protocolo;             // Ponteiro para o protocolo de comunicação do veículo
+        const std::string nome;          // Nome do componente/thread
         Ethernet::Mac_Address id_veiculo; // Endereço MAC do veículo (identificador único)
     };
 
@@ -38,11 +37,11 @@ public:
     bool criar_componente(const std::string nome, funcao func_rotina);
 
 private:
-    std::string nome;          // Nome do veículo
-    NIC<Engine> nic;           // Objeto que representa a interface de rede
-    Protocol protocolo;        // Protocolo de comunicação baseado na NIC
+    std::string nome;               // Nome do veículo
+    NIC<Engine> nic;                // Objeto que representa a interface de rede
+    Protocol protocolo;             // Protocolo de comunicação baseado na NIC
 
-    Agendador agendador;       // Agendador para controle de eventos e tempo
+    DataPublisher data_publisher;
 
     std::vector<pthread_t> threads; // Vetor que armazena os IDs das threads criadas
 };

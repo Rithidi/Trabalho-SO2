@@ -42,7 +42,7 @@ void* rotina_controlador(void* arg) {
     // Contador de respostas recebidas.
     int respostas_recebidas = 0;
 
-    while (respostas_recebidas < NUM_RESPOSTAS) {
+    while (respostas_recebidas < NUM_SENSORES * NUM_RESPOSTAS) {
         // Espera recebimento de mensagens.
         comunicador.receive(&mensagem);
 
@@ -75,41 +75,41 @@ void* rotina_controlador(void* arg) {
 void* rotina_sensor_temperatura(void* arg) {
     Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
     Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self());
+
+    // Configura tipos de dados que o componente pode fornecer.
+    std::vector<Ethernet::Type> tipos;
+    tipos.push_back(TIPO_SENSOR_TEMPERATURA);
+
+    // Se inscreve no DataPublisher para receber mensagens de interesse nos seus tipos de dados.
+    dados->data_publisher->subscribe(comunicador.getObserver(), &tipos);
+
     Message mensagem;
     int temperatura;
 
     // Dicionario para guardar numero de respostas ja enviadas para cada interessado (para encerrar teste).
     std::unordered_map<Thread_ID, int> requisicoes;
-
     int num_requisicoes_finalizadas = 0; // Numero de interessados que ja receberam todas suas respostas.
 
     while (num_requisicoes_finalizadas < NUM_CONTROLADORES) {
         // Simula a produção de dados.
         temperatura = 25 + (std::rand() % 6); // Gera número entre 25 e 30
 
-        // Verifica se recebeu alguma mensagem.
         if (comunicador.hasMessage()) {
             // Carrega mensagem recebida.
             comunicador.receive(&mensagem);
             // Verifica se a mensagem recebida eh de interesse (id componente nao foi preenchido).
             if (pthread_equal(mensagem.getDstAddress().component_id, (pthread_t)0)) {
-                // Verifica se mensagem de interesse eh para ele.
-                if (mensagem.getType() == TIPO_SENSOR_TEMPERATURA) {
-                    std::cout << "📬 " << dados->nome << ": recebeu interesse." << std::endl;
-                    // Registra periodo no Agendador.
-                    dados->agendador->registrar_interesse(pthread_self(), mensagem.getSrcAddress(), mensagem.getPeriod());
-                    // Inicializa contador de mensagens ja respondidas ao interessado (apenas para teste). 
-                    requisicoes[mensagem.getSrcAddress().component_id] = 0;
-                }
-            }
-        }
+                Ethernet::Address destino = mensagem.getSrcAddress();
 
-        // Verifica se algum periodo de resposta ja foi atingido.
-        if (dados->agendador->possui_periodos_atingidos(pthread_self())) {
-            // Extrai endereco de destino dos periodos ja atingidos.
-            std::vector<Ethernet::Address> destinos = dados->agendador->obter_destinos_prontos(pthread_self());
+                // Ignora interesse caso ja tenha enviado o limite de resposta para destino (apenas para finalizar teste).
+                if (requisicoes[destino.component_id] == NUM_RESPOSTAS) { continue; }
 
-            for (const auto& destino : destinos) {
+                std::cout << "📬 " << dados->nome << ": recebeu interesse." << std::endl;
+
+                if (requisicoes.find(destino.component_id) == requisicoes.end()) {
+                    requisicoes[destino.component_id] = 0;
+                } 
+
                 // Prepara mensagem de resposta.
                 mensagem.setType(TIPO_SENSOR_TEMPERATURA);
                 mensagem.setDstAddress(destino);
@@ -123,12 +123,17 @@ void* rotina_sensor_temperatura(void* arg) {
                 // Verifica se interessado ja recebeu numero max de respostas.
                 if (requisicoes[destino.component_id] == NUM_RESPOSTAS) {
                     num_requisicoes_finalizadas++;
-                    // Remove do Agendador o periodo de resposta para esse interessado.
-                    dados->agendador->remover_interesse(pthread_self(), destino);
+                }
+
+                if (num_requisicoes_finalizadas == NUM_CONTROLADORES) {
+                        break;
                 }
             }
         }
     }
+    
+    // Remove do Agendador o periodo de resposta para esse interessado.
+    dados->data_publisher->unsubscribe(comunicador.getObserver());
 
     // Informa que finalizou seus envios.
     std::cout << "📬 " << dados->nome << ": enviou TODAS SUAS RESPOSTAS." << std::endl;
@@ -179,20 +184,32 @@ int main(int argc, char *argv[]) {
     std::cout << " Período mínimo (ms): " << PERIODO_MIN << "\n";
     std::cout << " Período máximo (ms): " << PERIODO_MAX << "\n\n";
 
-    // Cria Veículo.
-    Veiculo veiculo(networkInterface, "Veiculo");
+    pid_t pid = fork();
 
-    // Adiciona componentes ao veículo.
-    for (int i = 0; i < NUM_SENSORES; i++) {
-        veiculo.criar_componente("Sensor Temperatura " + std::to_string(i + 1), rotina_sensor_temperatura);
+    if (pid == 0) {
+         // Cria Veículo.
+        Veiculo veiculo(networkInterface, "Veiculo");
+
+        // Adiciona componentes ao veículo.
+        for (int i = 0; i < NUM_SENSORES; i++) {
+            veiculo.criar_componente("Sensor Temperatura " + std::to_string(i + 1), rotina_sensor_temperatura);
+        }
+
+        // Espera um tempo para os sensores estarem prontos.
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+        for (int i = 0; i < NUM_CONTROLADORES; i++) {
+            veiculo.criar_componente("Controlador " + std::to_string(i + 1), rotina_controlador);
+        }
+        return 0;
     }
 
-    // Espera um tempo para os sensores estarem prontos.
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // Espera termino do processo filho.
+    while (wait(NULL) > 0);
 
-    for (int i = 0; i < NUM_CONTROLADORES; i++) {
-        veiculo.criar_componente("Controlador " + std::to_string(i + 1), rotina_controlador);
-    }
+    std::cout << "\n===============================" << std::endl;
+    std::cout << "✅ Teste finalizado." << std::endl;
+    std::cout << "===============================\n" << std::endl;
 
     return 0;
 }

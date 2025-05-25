@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-Protocol::Protocol(NIC<Engine>* nic, Protocol_Number protocol_number) 
-    : _nic(nic), protocol_number(protocol_number), _data_observer(this, protocol_number)
+Protocol::Protocol(NIC<Engine>* nic, DataPublisher* data_publisher, Protocol_Number protocol_number) 
+    : _nic(nic), _data_publisher(data_publisher), protocol_number(protocol_number), _data_observer(this, protocol_number)
 {
     _nic->attach(&_data_observer);
 };
@@ -69,8 +69,18 @@ void Protocol::receive(void* buf) {
     message.setPeriod(payload.header.period);         // Período de transmissão
     message.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
 
+
+    // Encaminha mensagens de interesse direto para o DataPublisher.
+    if (pthread_equal(payload.header.dst_address.component_id, (pthread_t)0)) {
+        _data_publisher->notify(message);
+    } else {
+        // Notifica os observadores com o endereço de destino e a mensagem
+        _observed.notify(message);
+    }
+
+    
     // Notifica os observadores com o endereço de destino e a mensagem
-    _observed.notify(message);
+    //_observed.notify(message);
 }
 
 

@@ -48,3 +48,7 @@ bool Communicator::hasMessage() {
     // Verifica se há mensagens disponíveis no observador
     return observer.hasMessage();
 }
+
+Concurrent_Observer* Communicator::getObserver() {
+    return &observer;
+}

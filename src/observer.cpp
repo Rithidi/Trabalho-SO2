@@ -54,6 +54,8 @@ void Concurrent_Observed::notify(Message message) {
     // Extrai endereco de destino da mensagem.
     Ethernet::Address dst_address = message.getDstAddress();
     mutex.lock();
+
+    /*
     // Verifica se encaminha por BROADCAST INTERNO: (todos componentes recebem, menos o que enviou)
     // Utilizado quando: Endereco de destino nao foi preenchido. ((thread_id) == (pthread_t)0)
     if (pthread_equal(dst_address.component_id, (pthread_t)0)) {
@@ -80,6 +82,21 @@ void Concurrent_Observed::notify(Message message) {
             }
         }
     }
+    */
+    
+    // Verifica se encaminha por DESTINO ESPECIFICO: (um unico componente recebe)
+    // Utilizado quando: Endereco de destino foi preenchido. ((thread_id) != (pthread_t)0)
+    if (!pthread_equal(dst_address.component_id, (pthread_t)0)) {
+        //std::cout << "Observer detectou: Destino especifico (component_id = " << dst_address.component_id << ")" << std::endl;
+        for (Concurrent_Observer* obs : observers) {
+            // Notifica o observador do componente de id especifico.
+            if (obs->communicator_address.component_id == dst_address.component_id) {
+                obs->update(message);
+                break;
+            }
+        }
+    }
+
     mutex.unlock();
 }
 
