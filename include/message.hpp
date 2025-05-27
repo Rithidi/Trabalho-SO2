@@ -1,13 +1,15 @@
 #pragma once
 #include <cstdint>
 #include <cstring>
+#include <chrono>
+
 #include "ethernet.hpp"
 
 // Classe que representa uma mensagem genérica para comunicação
 class Message {
 public:
     // Tamanho máximo da mensagem (em bytes)
-    static constexpr size_t MAX_SIZE = 1452; // 1500 - 14 (tamanho do cabeçalho Ethernet) - 34 (tamanho header)
+    static constexpr size_t MAX_SIZE = 1444; // 1500 - 14 (tamanho do cabeçalho Ethernet) - 42 (tamanho header)
     
     // Construtor: inicializa a mensagem com tamanho zero
     Message() : _size(0) {}
@@ -55,6 +57,12 @@ public:
         _header.period = period;
     }
 
+    // Define o timestamp da mensagem
+    void setTimestamp(std::chrono::steady_clock::time_point tp) {
+        // Converte o tempo desde a época para nanosegundos
+        _header.timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
+    }
+
     // Retorna o endereco de origem da mensagem
     const Ethernet::Address getSrcAddress() const {
         return _header.src_address;
@@ -73,6 +81,12 @@ public:
     // Retorna o periodo de transmissao da mensagem
     const Ethernet::Period getPeriod() const {
         return _header.period;
+    }
+
+    // Retorna o timestamp da mensagem
+    const std::chrono::steady_clock::time_point getTimestamp() const {
+        // Converte o timestamp armazenado em nanosegundos de volta para um ponto no tempo
+        return std::chrono::steady_clock::time_point(std::chrono::nanoseconds(_header.timestamp));
     }
 
 private:

@@ -6,9 +6,9 @@
 
 #include <iostream>
 #include <cstring>
+#include <tuple>
 
-
- // Classe responsável por montar e desmontar os frames de comunicação.
+// Classe responsável por montar e desmontar os frames de comunicação.
 class Ethernet {
 public:
     using Protocol_Number = uint16_t; // (2 bytes)
@@ -16,25 +16,47 @@ public:
     using Thread_ID = pthread_t; // (8 bytes)
     using Type = uint32_t; // (4 bytes)
     using Period = uint16_t; // (2 bytes)
+    using Timestamp = uint64_t; // (8 bytes)
+
+    // Tipos de dados utilizados pelo Time Synchronization Manager (PTP - IEEE 1588).
+    Ethernet::Type constexpr static TYPE_PTP_ANNOUNCE = 0x0B; // (4 bytes) Tipo de dado PTP Announce
+    Ethernet::Type constexpr static TYPE_PTP_SYNC = 0x0; // (4 bytes) Tipo de dado PTP Sync
+    Ethernet::Type constexpr static TYPE_PTP_DELAY_REQ = 0x01; // (4 bytes) Tipo de dado PTP Delay Request
+    Ethernet::Type constexpr static TYPE_PTP_DELAY_RESP = 0x09; // (4 bytes) Tipo de dado PTP Delay Response
 
     // Estrutura para armazenar o endereço dos componentes do veículo.
     struct Address { // (14 bytes)
         Mac_Address vehicle_id = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // Endereço MAC (identificador do carro) (6 bytes) // // Inicializa com valor inexistente
         Thread_ID component_id = (pthread_t)0; // ID da thread (identificador do componente) (8 bytes) // Inicializa com valor inexistente
+        // operador < (já implementado)
+        bool operator<(const Address& other) const {
+            return std::tie(vehicle_id, component_id) < std::tie(other.vehicle_id, other.component_id);
+        }
+
+        // operador ==
+        bool operator==(const Address& other) const {
+            return std::tie(vehicle_id, component_id) == std::tie(other.vehicle_id, other.component_id);
+        }
+
+        // operador >
+        bool operator>(const Address& other) const {
+            return std::tie(vehicle_id, component_id) > std::tie(other.vehicle_id, other.component_id);
+        }
     } __attribute__((packed));
 
     // Estrutura para armazenar o cabeçalho da aplicação.
-    struct Header { // (34 bytes)
+    struct Header { // (42 bytes)
         Address src_address; // Endereço de origem (14 bytes)
         Address dst_address; // Endereço de destino (14 bytes)
         Type type; // Tipo do dado (4 bytes)
         Period period; // Período de transmissão em milissegundos (max 65s) (2 bytes)
+        Timestamp timestamp; // Timestamp do envio da mensagem (8 bytes)
     } __attribute__((packed));
 
     // Estrutura para armazenar o payload da aplicação.
     struct Payload {
-        Header header; // Cabeçalho da aplicacao 34 bytes
-        uint8_t data[1452]; // Mensagem a ser transmitida 1452 bytes
+        Header header; // Cabeçalho da aplicacao 42 bytes
+        uint8_t data[1444]; // Mensagem a ser transmitida 1444 bytes
     } __attribute__((packed));
 
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)
