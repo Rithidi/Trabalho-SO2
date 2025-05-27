@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <thread>
 #include <vector>
+#include <semaphore.h>
 
 class Engine {
 public:
@@ -36,4 +37,7 @@ private:
 
     void receive_loop();
     void process_queue();
+
+    // SIGIO signal handler
+    static void sigio_handler(int signum);
 };
