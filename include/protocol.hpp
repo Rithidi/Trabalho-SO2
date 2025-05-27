@@ -7,6 +7,7 @@
 #include "ethernet.hpp"
 #include "message.hpp"
 #include "data_publisher.hpp"
+#include "time_sync_manager.hpp"
 
 using Protocol_Number = Ethernet::Protocol_Number;
 using Address = Ethernet::Address;
@@ -33,6 +34,7 @@ public:
 private:
     NIC<Engine>* _nic;
     DataPublisher* _data_publisher;
+    TimeSyncManager _time_sync_manager;
     Conditional_Data_Observer _data_observer;
     Concurrent_Observed _observed;
 };

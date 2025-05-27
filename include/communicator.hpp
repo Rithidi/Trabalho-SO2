@@ -2,7 +2,6 @@
 
 #include "message.hpp"
 #include "observer.hpp"
-#include "protocol.hpp"
 #include "ethernet.hpp"
 
 #include <array>

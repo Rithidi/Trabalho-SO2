@@ -4,8 +4,9 @@
 #include <iostream>
 
 Protocol::Protocol(NIC<Engine>* nic, DataPublisher* data_publisher, Protocol_Number protocol_number) 
-    : _nic(nic), _data_publisher(data_publisher), protocol_number(protocol_number), _data_observer(this, protocol_number)
-{
+    : _nic(nic), _data_publisher(data_publisher), _time_sync_manager(_data_publisher, this, _nic->get_address()),
+     protocol_number(protocol_number), _data_observer(this, protocol_number)
+{   
     _nic->attach(&_data_observer);
 };
 
@@ -26,11 +27,17 @@ int Protocol::send(Address from, Address to, Type type, Period period, const voi
 
     // Monta Payload com o cabeçalho e a mensagem
     Ethernet::Payload payload;
-    payload.header.src_address = from; // Endereço de origem
-    payload.header.dst_address = to;   // Endereço de destino
-    payload.header.type = type;        // Tipo da mensagem
-    payload.header.period = period;    // Período de transmissão
-    std::memcpy(payload.data, data, size); // Dados da mensagem
+    payload.header.src_address = from;      // Endereço de origem
+    payload.header.dst_address = to;        // Endereço de destino
+    payload.header.type = type;             // Tipo da mensagem
+    payload.header.period = period;         // Período de transmissão
+
+    // Obtem a hora atual de acordo com o etiquetador (TimeSyncManager).
+    auto now = _time_sync_manager.now();
+    auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    payload.header.timestamp = timestamp;   // Horario de envio
+
+    std::memcpy(payload.data, data, size);  // Dados da mensagem
 
     // Preenche o payload do frame com os dados.
     if (!_nic->fillPayload(&buf->frame, &payload)) {
@@ -63,10 +70,11 @@ void Protocol::receive(void* buf) {
 
     // Monta mensagem com o cabeçalho e os dados recebidos.
     Message message;
-    message.setSrcAddress(payload.header.src_address); // Endereço de origem
-    message.setDstAddress(payload.header.dst_address); // Endereço de destino
-    message.setType(payload.header.type);             // Tipo da mensagem
-    message.setPeriod(payload.header.period);         // Período de transmissão
+    message.setSrcAddress(payload.header.src_address);   // Endereço de origem
+    message.setDstAddress(payload.header.dst_address);   // Endereço de destino
+    message.setType(payload.header.type);                // Tipo da mensagem
+    message.setPeriod(payload.header.period);            // Período de transmissão
+    message.setTimestamp(std::chrono::time_point<std::chrono::system_clock>(std::chrono::nanoseconds(payload.header.timestamp))); // Horario de envio
     message.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
 
 

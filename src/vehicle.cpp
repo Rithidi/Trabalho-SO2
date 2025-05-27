@@ -2,8 +2,7 @@
 
 // Construtor: inicializa o nome do veículo, a NIC e o protocolo
 Veiculo::Veiculo(const std::string& interface, const std::string& nome)
-    : nome(nome), nic(interface), protocolo(&nic, &data_publisher, 0x88B5),
-     time_sync_manager(&data_publisher, &protocolo, nic.get_address()) {}
+    : nome(nome), nic(interface), protocolo(&nic, &data_publisher, 0x88B5) {}
 
 // Destrutor: espera todas as threads terminarem antes de destruir o objeto
 Veiculo::~Veiculo() {

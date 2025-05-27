@@ -44,7 +44,5 @@ private:
     Protocol protocolo;                 // Protocolo de comunicação baseado na NIC
 
     DataPublisher data_publisher;       // Publicador de dados
-    TimeSyncManager time_sync_manager;  // Gerenciador de sincronização de tempo
-
     std::vector<pthread_t> threads;     // Vetor que armazena os IDs das threads criadas
 };

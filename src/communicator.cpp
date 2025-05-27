@@ -1,5 +1,6 @@
 #include "../include/communicator.hpp"
 #include "../include/message.hpp"
+#include "../include/protocol.hpp"
 
 Communicator::Communicator(Protocol* protocol, Mac_Address vehicle_id, Thread_ID component_id)
     : _protocol(protocol) 
@@ -22,9 +23,8 @@ Communicator::~Communicator() {
 }
 
 bool Communicator::send(const Message* message) {
-    // Envia a mensagem usando o protocolo
     return (_protocol->send(_address, message->getDstAddress(), message->getType(),
-                            message->getPeriod(), message->data(), message->size()) > 0);
+            message->getPeriod(), message->data(), message->size()) > 0);
 }
 
 bool Communicator::receive(Message* message) {
@@ -37,6 +37,7 @@ bool Communicator::receive(Message* message) {
     message->setDstAddress(received_message.getDstAddress());
     message->setType(received_message.getType());
     message->setPeriod(received_message.getPeriod());
+    message->setTimestamp(received_message.getTimestamp());
     
     // Copia o conteúdo da mensagem recebida para a mensagem do comunicador.
     message->setData(received_message.data(), received_message.size());

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <set>
+#include <time.h>
 
 #include "../include/vehicle.hpp"
 
@@ -34,8 +35,17 @@ int main(int argc, char *argv[]) {
 
     if (pid == 0) {
         // Cria Veículo.
-        Veiculo veiculo(networkInterface, "Veiculo");
-        
+        Veiculo veiculo(networkInterface, "Veiculo1");
+        sleep(20);
+        return 0;
+    }
+
+    pid = fork();
+
+    if (pid == 0) {
+        // Cria Veículo.
+        Veiculo veiculo(networkInterface, "Veiculo2");
+        sleep(20);
         return 0;
     }
 
