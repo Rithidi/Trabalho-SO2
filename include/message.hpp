@@ -62,7 +62,7 @@ public:
     // Define o timestamp da mensagem
     void setTimestamp(std::chrono::system_clock::time_point tp) {
         // Converte o tempo desde a época para nanosegundos e armazena como uint64_t
-        _header.timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
+        _header.timestamp = std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
     }
 
     // Retorna o endereco de origem da mensagem
@@ -87,7 +87,7 @@ public:
 
     // Retorna o timestamp da mensagem
     std::chrono::system_clock::time_point getTimestamp() const {
-        return std::chrono::system_clock::time_point(std::chrono::nanoseconds(_header.timestamp));
+        return std::chrono::system_clock::time_point(std::chrono::microseconds(_header.timestamp));
     }
 
 private:

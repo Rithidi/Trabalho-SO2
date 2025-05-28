@@ -77,7 +77,6 @@ void Protocol::receive(void* buf) {
     message.setTimestamp(std::chrono::time_point<std::chrono::system_clock>(std::chrono::nanoseconds(payload.header.timestamp))); // Horario de envio
     message.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
 
-
     // Encaminha mensagens de interesse direto para o DataPublisher.
     if (pthread_equal(payload.header.dst_address.component_id, (pthread_t)0)) {
         _data_publisher->notify(message);
@@ -86,7 +85,6 @@ void Protocol::receive(void* buf) {
         _observed.notify(message);
     }
 
-    
     // Notifica os observadores com o endereço de destino e a mensagem
     //_observed.notify(message);
 }
