@@ -28,6 +28,8 @@ Esse comando irá compilar todos os testes localizados em ./tests/, gerando exec
 
 -> external_communication_test
 
+-> time_sync_test
+
 Para compilar um teste especifico, utilize: make nome_teste
 
 
@@ -40,7 +42,28 @@ sudo ./<nome_teste> <interface_de_rede> [parâmetros_opcionais]
 
 # ✅ Testes Disponíveis
 
-1️⃣ Comunicação Interna (internal_communication_test)
+1️⃣ Teste de sincronização temporal (time_sync_test)
+Simula o aparecimento de veiculos ao longo do tempo para acompanhar o funcionamento da classe TimeSyncManager durante o processo de sincronização de tempo.
+Imprime etapas realizadas no processo de de sincronização de tempo.
+    🔧 Como Executar
+
+    sudo ./time_sync_test <interface> [num_veiculos] [num_aparicoes] [intervalo_aparicao] [tempo_permanencia]
+
+    <interface>: Interface de rede (ex: eth0, wlan0)
+
+    [num_veiculos]: (Opcional) Número de veiculos instanciados por aparição (padrão: 1)
+
+    [num_aparicoes]: (Opcional) Número de aparições (padrão: 3)
+
+    [intervalo_aparicao]: (Opcional) Intervalo de tempo, em segundos, entre novas aparições (padrão: 5)
+
+    [tempo_permanencia]: (Opcional) Período de tempo, em segundos, que os veiculos permanecem ativos (padrão: 15)
+
+    Exemplo:
+
+    sudo ./time_sync_test eth0 1 3 5 15
+
+2️⃣ Comunicação Interna (internal_communication_test)
 Valida a comunicação entre componentes dentro do mesmo veículo. Cada Controlador envia requisições periódicas aos Sensores de Temperatura, que respondem com dados simulados.
 
     🧵 Componentes
@@ -70,7 +93,7 @@ Valida a comunicação entre componentes dentro do mesmo veículo. Cada Controla
 
     sudo ./internal_communication_test eth0 5 3 10 10 100
 
-2️⃣ Comunicação Externa (external_communication_test)
+3️⃣ Comunicação Externa (external_communication_test)
 Simula a interação entre veículos diferentes. Um Detector de Veículos envia requisições periódicas para sensores GPS de outros veículos, que respondem com suas posições.
 
     🧵 Componentes
