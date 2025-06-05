@@ -82,7 +82,7 @@ class RSU {
                 //std::cout << "RSU " << (int)message.getGroupID() << " enviando SYNC" << std::endl;
                 message.setData(reinterpret_cast<Ethernet::Quadrant*>(&self->quadrant), sizeof(Ethernet::Quadrant));
                 message.setPeriod(0);
-                //std::cout << "RSU " << (int)self->group_id << " enviou SYNC" << std::endl;
+                std::cout << "RSU " << (int)self->group_id << " enviou SYNC" << std::endl;
                 self->communicator->send(&message);
 
                 self->cv.wait_until(lock, next_send, [&] { return !self->running; });

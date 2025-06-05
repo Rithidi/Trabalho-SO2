@@ -49,10 +49,18 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
     // Preenche o timestamp.
     payload.header.timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();   // Horario de envio
 
+    bool is_internal = false;
+
+    // Verifica se o endereço MAC de origem e destino são iguais
+    if (from.vehicle_id == to.vehicle_id) {
+        is_internal = true; // Define como interno se os endereços forem iguais
+    }
+
     // Preenche o MAC da mensagem.
-    if (_rsu_handler != nullptr && payload.header.type != Ethernet::TYPE_PTP_DELAY_REQ &&
-                                   payload.header.type != Ethernet::TYPE_RSU_JOIN_REQ) {
-        payload.header.mac = generate_mac(payload.header, _rsu_handler->getCurrentGroupMAC());
+    if (!is_internal && _rsu_handler != nullptr &&
+        payload.header.type != Ethernet::TYPE_PTP_DELAY_REQ &&
+        payload.header.type != Ethernet::TYPE_RSU_JOIN_REQ) {
+        payload.header.mac = generate_mac(payload.header, _rsu_handler->getGroupMAC(_rsu_handler->getCurrentGroupID()));
     }
 
     std::memcpy(payload.data, data, size);  // Dados da mensagem
@@ -61,13 +69,6 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
     if (!_nic->fillPayload(&buf->frame, &payload)) {
         return -1; // Retorna -1 se o preenchimento falhar
     }   
-
-    bool is_internal = false;
-
-    // Verifica se o endereço MAC de origem e destino são iguais
-    if (from.vehicle_id == to.vehicle_id) {
-        is_internal = true; // Define como interno se os endereços forem iguais
-    }
     
     // Envia o frame Ethernet para a NIC
     return _nic->send(buf, is_internal);
@@ -95,7 +96,8 @@ void Protocol::receive(void* buf) {
             payload.header.type != Ethernet::TYPE_PTP_DELAY_RESP &&
             payload.header.type != Ethernet::TYPE_RSU_JOIN_RESP) {
             // Verifica se a mensagem veio de algum grupo que o Veiculo nao pertence.
-            if (!_rsu_handler->isInGroup(payload.header.group_id)) {
+            if (payload.header.group_id != _rsu_handler->getCurrentGroupID() ||
+                !_rsu_handler->isNeighborGroup(payload.header.group_id)) {
                 return; // Se o Veiculo nao pertence ao grupo, descarta a mensagem
             } else {
                 // Verifica o MAC da mensagem.
