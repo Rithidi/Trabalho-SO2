@@ -72,14 +72,14 @@ class RSU {
 
             std::unique_lock<std::mutex> lock(self->mutex);
             while (self->running) {
-                next_send += std::chrono::milliseconds(100);
+                next_send += std::chrono::milliseconds(2000);
 
                 // Envia PTP_SYNC junto com ID e Quadrante da RSU.
                 Message message;
                 message.setDstAddress({{0,0,0,0,0,0}, (pthread_t)0});
                 message.setType(Ethernet::TYPE_PTP_SYNC);
                 message.setGroupID(self->group_id);
-                std::cout << "RSU " << (int)message.getGroupID() << " enviando SYNC" << std::endl;
+                //std::cout << "RSU " << (int)message.getGroupID() << " enviando SYNC" << std::endl;
                 message.setData(reinterpret_cast<Ethernet::Quadrant*>(&self->quadrant), sizeof(Ethernet::Quadrant));
                 message.setPeriod(0);
                 //std::cout << "RSU " << (int)self->group_id << " enviou SYNC" << std::endl;

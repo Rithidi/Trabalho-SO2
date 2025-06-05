@@ -8,16 +8,16 @@
 
 int main() {
     RSU rsu_1("enp0s1", 1, {0, 100, 0, 100}); // ID do grupo 1, Quadrante de 0 a 100 em X e Y.
-    //RSU rsu_2("enp0s1", 2, {-100, 0, 0, 100});
-    //RSU rsu_3("enp0s1", 3, {-100, 0, -100, 0});
-    //RSU rsu_4("enp0s1", 4, {0, 100, -100, 0});
+    RSU rsu_2("enp0s1", 2, {-100, 0, 0, 100});
+    RSU rsu_3("enp0s1", 3, {-100, 0, -100, 0});
+    RSU rsu_4("enp0s1", 4, {0, 100, -100, 0});
 
     // Cria Processo.
     pid_t pid = fork();
 
     if (pid == 0) {
         // Cria Veículo 1.
-        Veiculo veiculo("enp0s1", "Veiculo 0");
+        Veiculo veiculo("enp0s1", "Veiculo 1");
         std::this_thread::sleep_for(std::chrono::seconds(20));
         return 0;
     }

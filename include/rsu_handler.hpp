@@ -96,16 +96,18 @@ class RSUHandler {
                     switch (message.getType()) {
                         case Ethernet::TYPE_PTP_SYNC:
                         {
-                            std::cout << "RSU Handler recebeu SYNC" << std::endl;
+                            //std::cout << "RSU Handler recebeu SYNC" << std::endl;
 
                             // Pega o quadrante da mensagem.
                             Ethernet::Quadrant quadrant = *reinterpret_cast<Ethernet::Quadrant*>(message.data());
 
+                            /*
                             std::cout << (int)message.getGroupID() << " Quadrante recebido: "
                                       << "x_min: " << quadrant.x_min << ", "
                                       << "x_max: " << quadrant.x_max << ", "
                                       << "y_min: " << quadrant.y_min << ", "
                                       << "y_max: " << quadrant.y_max << std::endl;
+                            */
 
                             // Verifica se o Veiculo ja faz parte do grupo da RSU.
                             if (self->groups.count(message.getGroupID()) > 0) {
@@ -116,11 +118,16 @@ class RSUHandler {
                                     self->groups.erase(message.getGroupID());
                                     // Atualiza lider atual.
                                     auto first_pair = self->groups.begin();
-                                    self->time_sync_manager->setGrandmaster(first_pair->second.rsu_address);
+                                    self->time_sync_manager->setGrandmaster(first_pair->first, first_pair->second.rsu_address);
                                     std::cout << "Veiculo saiu do quadrante do RSU " << (int)message.getGroupID() << ", removendo grupo." << std::endl;
                                 }
                             } else { // Se o Veiculo nao faz parte do grupo da RSU.
                                 std::cout << "RSU Handler recebeu SYNC de grupo desconhecido." << std::endl;
+                                // Verifica se o Veiculo ja enviou JOIN_REQ para este grupo.
+                                if (self->join_reqts.count(message.getGroupID()) > 0) {
+                                    std::cout << "Veiculo ja enviou JOIN_REQ para o grupo " << (int)message.getGroupID() << ", ignorando SYNC." << std::endl;
+                                    break; // Ignora SYNC se ja enviou JOIN_REQ.
+                                }
                                 // Verifica se o Veiculo esta no quadrante do RSU.
                                 if (position.x >= quadrant.x_min && position.x <= quadrant.x_max &&
                                     position.y >= quadrant.y_min && position.y <= quadrant.y_max) {
@@ -130,13 +137,17 @@ class RSUHandler {
                                     joinRequest.setDstAddress(message.getSrcAddress());
                                     joinRequest.setType(Ethernet::TYPE_RSU_JOIN_REQ);
                                     communicator.send(&joinRequest);
+                                    self->join_reqts.insert(message.getGroupID());
                                 }
                             }
                             break;
                         }   
                         case Ethernet::TYPE_RSU_JOIN_RESP:
                         {
-                            std::cout << "RSU Handler recebeu JOIN_RESP" << std::endl;
+                            std::cout << "RSU Handler recebeu JOIN_RESP da RSU " << (int)message.getGroupID() << std::endl;
+
+                            // Remove o ID do grupo da lista de JOIN_REQs.
+                            self->join_reqts.erase(message.getGroupID());
 
                             // Pega o quadrante da mensagem.
                             Ethernet::Quadrant quadrant = *reinterpret_cast<Ethernet::Quadrant*>(message.data());
@@ -147,9 +158,15 @@ class RSUHandler {
                                 // Adiciona o grupo na estrutura de grupos.
                                 self->groups[message.getGroupID()] = {message.getSrcAddress(), message.getMAC()};
                                 // Notifica TimeSyncManager sobre o novo lider.
-                                self->time_sync_manager->setGrandmaster(message.getSrcAddress());
+                                self->time_sync_manager->setGrandmaster(message.getGroupID(), message.getSrcAddress());
                             }
-                            break;
+
+                            // imprime a estrutura de grupos.
+                            std::cout << "Grupos atuais: " << std::endl;
+                            for (const auto& group : self->groups) {
+                                std::cout << "Grupo ID: " << (int)group.first << std::endl;
+                            }
+                            break;  
                         }
                         case Ethernet::TYPE_POSITION_DATA:
                             break;
@@ -163,16 +180,18 @@ class RSUHandler {
             pthread_exit(NULL);
         }
 
-    private:
-        std::map<Ethernet::Group_ID, GroupData> groups;       // Map de dados dos grupos
+    private: 
+        std::map<Ethernet::Group_ID, GroupData> groups;   // Map de dados dos grupos
 
-        DataPublisher* data_publisher;                              // Publicador de dados
-        TimeSyncManager* time_sync_manager;                         // Gerenciador de sincronização de tempo
-        Protocol* protocol;                                         // Protocolo de comunicação
-        Ethernet::Address address;                                  // Endereço do veículo (MAC + ID da thread)
+        std::set<Ethernet::Group_ID> join_reqts;         // ID dos grupos que o veiculo ja encaminhou JOIN_REQ
 
-        pthread_t thread;                                           // Thread de recepção de mensagens
+        DataPublisher* data_publisher;                   // Publicador de dados
+        TimeSyncManager* time_sync_manager;              // Gerenciador de sincronização de tempo
+        Protocol* protocol;                              // Protocolo de comunicação
+        Ethernet::Address address;                       // Endereço do veículo (MAC + ID da thread)
 
-        std::vector<Ethernet::Type> types;                          // Tipos de mensagens PTP observados
+        pthread_t thread;                                // Thread de recepção de mensagens
+
+        std::vector<Ethernet::Type> types;               // Tipos de mensagens PTP observados
         bool running = true;
 };

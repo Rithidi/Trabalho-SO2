@@ -61,9 +61,10 @@ public:
                               std::chrono::duration_cast<Clock::duration>(clockOffset);
     }
 
-    void setGrandmaster(const Ethernet::Address& address) {
+    void setGrandmaster(Ethernet::Group_ID groupId, const Ethernet::Address& address) {
         //clockOffset = std::chrono::microseconds(0); // Reseta o clockOffset ao definir o Grandmaster
         grandmasterAddress = address;            // Define o endereço do Grandmaster
+        grandmasterGroupId = groupId;            // Define o ID do grupo do Grandmaster
     }
 
 private:
@@ -76,15 +77,14 @@ private:
         self->dataPublisher->subscribe(communicator.getObserver(), &self->types);
 
         while (self->running) {
-            //std::cout << "AAAA" << std::endl;
             if (communicator.hasMessage()) {
                 Message message;
                 communicator.receive(&message);
                 switch (message.getType()) {
                     case Ethernet::TYPE_PTP_SYNC:
                         // Verifica se o remetente é o Grandmaster
-                        if (message.getSrcAddress() == self->grandmasterAddress) {
-                            std::cout << "Sincronizando tempo com o Grandmaster..." << std::endl;
+                        if (message.getGroupID() == self->grandmasterGroupId) {
+                            std::cout << "⏱️  Sincronizando tempo com a RSU " << (int)self->grandmasterGroupId << std::endl;
                             self->syncSendTime = message.getTimestamp();
                             self->syncRecvTime = self->now();
 
@@ -117,11 +117,11 @@ private:
                         // Atualiza o clockOffset com o novo offset calculado
                         self->clockOffset = std::chrono::duration_cast<std::chrono::microseconds>(((t2 - t1) - (t4 - t3)) / 2);
 
-                        
+                        /*
                         std::cout << "\n(S) Offset ajustado: " << self->clockOffset.count() << " µs (";
                         self->print_address(self->address.vehicle_id);
                         std::cout << ")" << std::endl;
-                        
+                        */
 
                         //std::cout << "Delay: " << delay.count() << " µs" << std::endl;
                         //std::cout << "syncRecvTime: " << std::chrono::duration_cast<std::chrono::microseconds>(syncRecvTime.time_since_epoch()).count() << " µs" << std::endl;
@@ -133,15 +133,6 @@ private:
                     default:
                         break;
                 }
-            }
-
-            auto now = Clock::now();
-
-            // Mostra o relógio local corrigido periodicamente
-            if (now - self->lastShareTime >= std::chrono::duration_cast<Clock::duration>(std::chrono::microseconds(self->shareTimeInterval.count() * 1000))) {
-                self->lastShareTime = now;
-                std::cout << "(S) ";
-                self->print_time_utc();
             }
         }
         self->dataPublisher->unsubscribe(communicator.getObserver());
@@ -184,6 +175,7 @@ private:
 
     // Informações do Grandmaster
     Ethernet::Address grandmasterAddress;
+    Ethernet::Group_ID grandmasterGroupId;
 
     std::vector<Ethernet::Type> types;  // Tipos de mensagens PTP observados
     bool running = true;
@@ -203,7 +195,4 @@ private:
     std::chrono::microseconds defaultClockOffset{dist(gen)};
     // Offset do GM atual.
     std::chrono::microseconds clockOffset{0};
-
-    std::chrono::milliseconds shareTimeInterval{10000};
-    Clock::time_point lastShareTime = Clock::now();
 };
