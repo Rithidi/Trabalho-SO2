@@ -11,7 +11,7 @@ TEST_DIR := ./test
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
 
 # Lista de testes (adicione aqui os nomes dos arquivos de teste sem .cpp)
-TESTS := internal_communication_test external_communication_test time_sync_test
+TESTS := internal_communication_test external_communication_test time_sync_test group_communication_test
 
 # Regra principal: compila todos os testes
 all: $(TESTS)

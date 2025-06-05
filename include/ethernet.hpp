@@ -1,9 +1,9 @@
 #pragma once
+
 #include <cstdint>
 #include <array>
 #include <cstddef>
 #include <pthread.h>
-
 #include <iostream>
 #include <cstring>
 #include <tuple>
@@ -11,18 +11,40 @@
 // Classe responsável por montar e desmontar os frames de comunicação.
 class Ethernet {
 public:
-    using Protocol_Number = uint16_t; // (2 bytes)
+    using Protocol_Number = uint16_t;           // (2 bytes)
     using Mac_Address = std::array<uint8_t, 6>; // (6 bytes)
-    using Thread_ID = pthread_t; // (8 bytes)
-    using Type = uint32_t; // (4 bytes)
-    using Period = uint16_t; // (2 bytes)
-    using Timestamp = uint64_t; // (8 bytes)
+    using Thread_ID = pthread_t;                // (8 bytes)
+    using Type = uint32_t;                      // (4 bytes)
+    using Period = uint16_t;                    // (2 bytes)
+    using Timestamp = uint64_t;                 // (8 bytes)
+    using MAC_key = std::array<uint8_t, 16>;    // (16 bytes)
+    using Group_ID = uint8_t;                   // (1 byte)
 
     // Tipos de dados utilizados pelo Time Synchronization Manager (PTP - IEEE 1588).
-    Ethernet::Type constexpr static TYPE_PTP_ANNOUNCE = 0x0B; // (4 bytes) Tipo de dado PTP Announce
-    Ethernet::Type constexpr static TYPE_PTP_SYNC = 0x0; // (4 bytes) Tipo de dado PTP Sync
-    Ethernet::Type constexpr static TYPE_PTP_DELAY_REQ = 0x01; // (4 bytes) Tipo de dado PTP Delay Request
+    Ethernet::Type constexpr static TYPE_PTP_SYNC = 0x0;        // (4 bytes) Tipo de dado PTP Sync
+    Ethernet::Type constexpr static TYPE_PTP_DELAY_REQ = 0x01;  // (4 bytes) Tipo de dado PTP Delay Request
     Ethernet::Type constexpr static TYPE_PTP_DELAY_RESP = 0x09; // (4 bytes) Tipo de dado PTP Delay Response
+
+    // Tipos de dados utilizados para comunicacao entre RSU e veiculos.
+    Ethernet::Type constexpr static TYPE_RSU_JOIN_REQ = 0x0A;   // (4 bytes)
+    Ethernet::Type constexpr static TYPE_RSU_JOIN_RESP = 0x0B;  // (4 bytes)
+
+    // Tipo de dado enviado pelos componentes que fornecem a posicao dos veiculo.
+    Ethernet::Type constexpr static TYPE_POSITION_DATA = 0x0D;
+
+    // Estrturua de dados para envio da Localizacao dos veiculos.
+    struct Position {
+        int x;
+        int y;
+    };
+
+    // Estrutura de dados para envio do Quadrante dos RSUs.
+    struct Quadrant {
+        int x_min;
+        int x_max;
+        int y_min;
+        int y_max;
+    };
 
     // Estrutura para armazenar o endereço dos componentes do veículo.
     struct Address { // (14 bytes)
@@ -45,18 +67,20 @@ public:
     } __attribute__((packed));
 
     // Estrutura para armazenar o cabeçalho da aplicação.
-    struct Header { // (42 bytes)
+    struct Header { // (59 bytes)
         Address src_address; // Endereço de origem (14 bytes)
         Address dst_address; // Endereço de destino (14 bytes)
-        Type type; // Tipo do dado (4 bytes)
-        Period period; // Período de transmissão em milissegundos (max 65s) (2 bytes)
+        Type type;           // Tipo do dado (4 bytes)
+        Period period = 0;   // Período de transmissão em milissegundos (max 65s) (2 bytes)
         Timestamp timestamp; // Timestamp do envio da mensagem (8 bytes)
+        MAC_key mac;         // Message Authentication Code (16 bytes)
+        Group_ID group_id;   // Identificador do grupo (1 byte)
     } __attribute__((packed));
 
     // Estrutura para armazenar o payload da aplicação.
     struct Payload {
-        Header header; // Cabeçalho da aplicacao 42 bytes
-        uint8_t data[1444]; // Mensagem a ser transmitida 1444 bytes
+        Header header; // Cabeçalho da aplicacao 59 bytes
+        uint8_t data[1427]; // Mensagem a ser transmitida 1427 bytes
     } __attribute__((packed));
 
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)

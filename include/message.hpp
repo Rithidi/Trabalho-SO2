@@ -1,8 +1,8 @@
 #pragma once
+
 #include <cstdint>
 #include <cstring>
 #include <chrono>
-
 #include <iostream>
 
 #include "ethernet.hpp"
@@ -11,7 +11,7 @@
 class Message {
 public:
     // Tamanho máximo da mensagem (em bytes)
-    static constexpr size_t MAX_SIZE = 1444; // 1500 - 14 (tamanho do cabeçalho Ethernet) - 42 (tamanho header)
+    static constexpr size_t MAX_SIZE = 1427; // 1500 - 14 (tamanho do cabeçalho Ethernet) - 59 (tamanho header)
     
     // Construtor: inicializa a mensagem com tamanho zero
     Message() : _size(MAX_SIZE) {}
@@ -65,6 +65,16 @@ public:
         _header.timestamp = std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
     }
 
+    // Define o MAC (Message Authentication Code)
+    void setMAC(Ethernet::MAC_key mac) {
+        _header.mac = mac;
+    }
+
+    // Define o identificador do grupo
+    void setGroupID(Ethernet::Group_ID group_id) {
+        _header.group_id = group_id;
+    }
+
     // Retorna o endereco de origem da mensagem
     const Ethernet::Address getSrcAddress() const {
         return _header.src_address;
@@ -88,6 +98,16 @@ public:
     // Retorna o timestamp da mensagem
     std::chrono::system_clock::time_point getTimestamp() const {
         return std::chrono::system_clock::time_point(std::chrono::microseconds(_header.timestamp));
+    }
+
+    // Retorna o MAC (Message Authentication Code) da mensagem
+    Ethernet::MAC_key getMAC() const {
+        return _header.mac;
+    }
+
+    // Retorna o identificador do grupo
+    Ethernet::Group_ID getGroupID() const {
+        return _header.group_id;
     }
 
 private:

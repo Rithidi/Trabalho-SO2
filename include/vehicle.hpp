@@ -7,6 +7,7 @@
 #include "../include/engine.hpp"
 #include "../include/data_publisher.hpp"
 #include "../include/time_sync_manager.hpp"
+#include "../include/rsu_handler.hpp"
 
 #include <string>
 #include <pthread.h>
@@ -44,5 +45,8 @@ private:
     Protocol protocolo;                 // Protocolo de comunicação baseado na NIC
 
     DataPublisher data_publisher;       // Publicador de dados
-    std::vector<pthread_t> threads;     // Vetor que armazena os IDs das threads criadas
+    TimeSyncManager time_sync_manager;  // Gerenciador de sincronização de tempo
+    RSUHandler rsu_handler;             // Manipulador de RSU (Unidade de Rede Veicular)
+
+    std::vector<pthread_t> threads;       // Vetor que armazena os IDs das threads criadas
 };

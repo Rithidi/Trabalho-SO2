@@ -17,7 +17,7 @@
 #include "../include/data_publisher.hpp"
 #include "../include/message.hpp"
 
-// lasse responsável por gerenciar a sincronização de tempo entre veiculos.
+// classe responsável por gerenciar a sincronização de tempo entre veiculos.
 class TimeSyncManager {
 public:
     using Clock = std::chrono::system_clock;
@@ -34,17 +34,16 @@ public:
         print_address(vehicleID);
         std::cout << " | Offset inicial do relógio: " << defaultClockOffset.count() << " µs\n" << std::endl;
         
-        // Tipos de mensagens do PTP que serão processadas
-        types.push_back(Ethernet::TYPE_PTP_ANNOUNCE);
+        // Tipos de mensagens PTP que serão recebidas.
         types.push_back(Ethernet::TYPE_PTP_SYNC);
-        types.push_back(Ethernet::TYPE_PTP_DELAY_REQ);
         types.push_back(Ethernet::TYPE_PTP_DELAY_RESP);
 
         // Cria e inicia a thread de sincronização
         ThreadData* data = new ThreadData{this};
         int err = pthread_create(&thread, nullptr, &TimeSyncManager::time_sync_routine, data);
         if (err != 0) {
-            std::cerr << "Erro ao criar thread: " << strerror(err) << std::endl;
+            delete data;
+            std::cerr << "Erro ao criar thread de sincronização: " << strerror(err) << std::endl;
         }
 
         address.vehicle_id = vehicleID;
@@ -54,13 +53,17 @@ public:
     // Destrutor: encerra a thread
     ~TimeSyncManager() {
         running = false;
-        pthread_join(thread, nullptr);
     }
 
     // Retorna o horário atual corrigido pelo offset calculado, em microssegundos
     Clock::time_point now() {
         return Clock::now() + std::chrono::duration_cast<Clock::duration>(defaultClockOffset) +
                               std::chrono::duration_cast<Clock::duration>(clockOffset);
+    }
+
+    void setGrandmaster(const Ethernet::Address& address) {
+        //clockOffset = std::chrono::microseconds(0); // Reseta o clockOffset ao definir o Grandmaster
+        grandmasterAddress = address;            // Define o endereço do Grandmaster
     }
 
 private:
@@ -72,172 +75,78 @@ private:
         Communicator communicator(self->protocol, self->address.vehicle_id, pthread_self());
         self->dataPublisher->subscribe(communicator.getObserver(), &self->types);
 
-        self->sendAnnounce(communicator);
-        self->lastAnnounceTime = Clock::now();
-
         while (self->running) {
+            //std::cout << "AAAA" << std::endl;
             if (communicator.hasMessage()) {
-                Message msg;
-                communicator.receive(&msg);
-                self->processPTPMessage(&msg, &communicator);
+                Message message;
+                communicator.receive(&message);
+                switch (message.getType()) {
+                    case Ethernet::TYPE_PTP_SYNC:
+                        // Verifica se o remetente é o Grandmaster
+                        if (message.getSrcAddress() == self->grandmasterAddress) {
+                            std::cout << "Sincronizando tempo com o Grandmaster..." << std::endl;
+                            self->syncSendTime = message.getTimestamp();
+                            self->syncRecvTime = self->now();
+
+                            // Envia mensagem de Delay Request para o Grandmaster.
+                            message.setType(Ethernet::TYPE_PTP_DELAY_REQ);
+                            message.setDstAddress(self->grandmasterAddress);
+                            message.setPeriod(0);
+                            communicator.send(&message);
+
+                            self->delayReqSendTime = message.getTimestamp();
+                        }
+                        break;
+                    case Ethernet::TYPE_PTP_DELAY_RESP:
+                    {
+                        //std::cout << "Delay RESP recebido" << std::endl;
+                        self->delayRespRecvTime = message.getTimestamp();
+                        // Cálculo do offset baseado nas fórmulas do PTP
+                        // t1: syncSendTime (GM)       t2: syncRecvTime (Slave)
+                        // t3: delayReqSendTime (Slave) t4: delayRespRecvTime (GM)
+                        
+                        auto t1 = self->syncSendTime;
+                        auto t2 = self->syncRecvTime;
+                        auto t3 = self->delayReqSendTime;
+                        auto t4 = self->delayRespRecvTime;
+
+                        // Calcula offset e delay corretamente
+                        //auto offset = std::chrono::duration_cast<std::chrono::microseconds>(((t2 - t1) - (t4 - t3)) / 2);
+                        //auto delay  = std::chrono::duration_cast<std::chrono::microseconds>((t2 - t1 + (t4 - t3)) / 2);
+
+                        // Atualiza o clockOffset com o novo offset calculado
+                        self->clockOffset = std::chrono::duration_cast<std::chrono::microseconds>(((t2 - t1) - (t4 - t3)) / 2);
+
+                        
+                        std::cout << "\n(S) Offset ajustado: " << self->clockOffset.count() << " µs (";
+                        self->print_address(self->address.vehicle_id);
+                        std::cout << ")" << std::endl;
+                        
+
+                        //std::cout << "Delay: " << delay.count() << " µs" << std::endl;
+                        //std::cout << "syncRecvTime: " << std::chrono::duration_cast<std::chrono::microseconds>(syncRecvTime.time_since_epoch()).count() << " µs" << std::endl;
+                        //std::cout << "syncSendTime: " << std::chrono::duration_cast<std::chrono::microseconds>(syncSendTime.time_since_epoch()).count() << " µs" << std::endl;
+                        //std::cout << "delayRespRecvTime: " << std::chrono::duration_cast<std::chrono::microseconds>(delayRespRecvTime.time_since_epoch()).count() << " µs" << std::endl;
+                        //std::cout << "delayReqSendTime: " << std::chrono::duration_cast<std::chrono::microseconds>(delayReqSendTime.time_since_epoch()).count() << " µs\n" << std::endl;
+                        break;
+                    }
+                    default:
+                        break;
+                }
             }
 
             auto now = Clock::now();
 
-            // Envia mensagem de sincronização periodicamente (apenas se for GM)
-            if (self->isGrandmaster && (now - self->lastSyncTime >= std::chrono::duration_cast<Clock::duration>(std::chrono::microseconds(self->syncInterval.count() * 1000)))) {
-                self->sendSync(communicator);
-                self->lastSyncTime = now;
-            }
-
-            // Reenvia anúncio periodicamente
-            if (now - self->lastAnnounceTime >= std::chrono::duration_cast<Clock::duration>(std::chrono::microseconds(self->announceInterval.count() * 1000))) {
-                self->sendAnnounce(communicator);
-                self->lastAnnounceTime = now;
-            }
-
-            // Executa o algoritmo de eleição do grandmaster periodicamente
-            if (now - self->lastBMCATime >= std::chrono::duration_cast<Clock::duration>(std::chrono::microseconds(self->bmcaInterval.count() * 1000))) {
-                std::cout << "\nRodando BMCA" << std::endl;
-                self->runBMCA();
-                self->lastBMCATime = now;
-            }
-
             // Mostra o relógio local corrigido periodicamente
             if (now - self->lastShareTime >= std::chrono::duration_cast<Clock::duration>(std::chrono::microseconds(self->shareTimeInterval.count() * 1000))) {
                 self->lastShareTime = now;
-
-                if (self->isGrandmaster) {
-                    std::cout << "*(GC) ";
-                    self->print_time_utc();
-                } else {
-                    std::cout << "(S) ";
-                    self->print_time_utc();
-                }
+                std::cout << "(S) ";
+                self->print_time_utc();
             }
         }
-
         self->dataPublisher->unsubscribe(communicator.getObserver());
         delete data;
-        pthread_exit(nullptr);
-    }
-
-    // Processa mensagens PTP recebidas
-    void processPTPMessage(Message* message, Communicator* communicator) {
-        Message msg;
-        switch (message->getType()) {
-            case Ethernet::TYPE_PTP_SYNC:
-                //std::cout << "Sync recebido" << std::endl;
-                syncSendTime = message->getTimestamp();
-                syncRecvTime = now();
-
-                msg.setType(Ethernet::TYPE_PTP_DELAY_REQ);
-                msg.setDstAddress(grandmasterAddress);
-                msg.setPeriod(0);
-                communicator->send(&msg);
-
-                delayReqSendTime = msg.getTimestamp();
-                break;
-
-            case Ethernet::TYPE_PTP_ANNOUNCE:
-                bmcaParticipants.insert(message->getSrcAddress());
-                break;
-
-            case Ethernet::TYPE_PTP_DELAY_REQ:
-                if (isGrandmaster) {
-                    //std::cout << "Delay REQ recebido" << std::endl;
-                    msg.setType(Ethernet::TYPE_PTP_DELAY_RESP);
-                    msg.setDstAddress(message->getSrcAddress());
-                    msg.setPeriod(0);
-                    communicator->send(&msg);
-                    //std::cout << "Delay REQ respondido" << std::endl;
-                }
-                break;
-
-            case Ethernet::TYPE_PTP_DELAY_RESP:
-            {
-                //std::cout << "Delay RESP recebido" << std::endl;
-                delayRespRecvTime = message->getTimestamp();
-                // Cálculo do offset baseado nas fórmulas do PTP
-                // t1: syncSendTime (GM)       t2: syncRecvTime (Slave)
-                // t3: delayReqSendTime (Slave) t4: delayRespRecvTime (GM)
-
-                auto t1 = syncSendTime;
-                auto t2 = syncRecvTime;
-                auto t3 = delayReqSendTime;
-                auto t4 = delayRespRecvTime;
-
-                // Calcula offset e delay corretamente
-                auto offset = std::chrono::duration_cast<std::chrono::microseconds>(((t2 - t1) - (t4 - t3)) / 2);
-                //auto delay  = std::chrono::duration_cast<std::chrono::microseconds>((t2 - t1 + (t4 - t3)) / 2);
-
-                clockOffset = offset;
-
-                std::cout << "\n(S) Offset ajustado: " << clockOffset.count() << " µs (";
-                print_address(address.vehicle_id);
-                std::cout << ")" << std::endl;
-                //std::cout << "Delay: " << delay.count() << " µs" << std::endl;
-                //std::cout << "syncRecvTime: " << std::chrono::duration_cast<std::chrono::microseconds>(syncRecvTime.time_since_epoch()).count() << " µs" << std::endl;
-                //std::cout << "syncSendTime: " << std::chrono::duration_cast<std::chrono::microseconds>(syncSendTime.time_since_epoch()).count() << " µs" << std::endl;
-                //std::cout << "delayRespRecvTime: " << std::chrono::duration_cast<std::chrono::microseconds>(delayRespRecvTime.time_since_epoch()).count() << " µs" << std::endl;
-                //std::cout << "delayReqSendTime: " << std::chrono::duration_cast<std::chrono::microseconds>(delayReqSendTime.time_since_epoch()).count() << " µs\n" << std::endl;
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    // Eleição do Grandmaster usando BMCA (Best Master Clock Algorithm)
-    // criterio: Candidato com maior vehicle_id (mac_address ficticio da nic) 
-    void runBMCA() {
-        clockOffset = std::chrono::microseconds(0);
-
-        if (bmcaParticipants.empty()) {
-            std::cout << "Nenhum participante encontrado para BMCA" << std::endl;
-            isGrandmaster = true;
-            grandmasterAddress = address;
-            std::cout << "Grandmaster eleito: ";
-            print_address(grandmasterAddress.vehicle_id);
-            std::cout << "\n" << std::endl;
-            return;
-        }
-
-        // Seleciona o maior endereço como Grandmaster (critério simples)
-        auto grandmaster = address;
-        for (const auto& participant : bmcaParticipants) {
-            if (participant > grandmaster) {
-                grandmaster = participant;
-            }
-        }
-        grandmasterAddress = grandmaster;
-
-        isGrandmaster = (grandmaster == address);
-
-        std::cout << "Grandmaster eleito: ";
-        print_address(grandmasterAddress.vehicle_id);
-        std::cout << "\n";
-
-        bmcaParticipants.clear();
-    }
-
-    // Envia mensagem de sincronização
-    void sendSync(Communicator& communicator) {
-        Message msg;
-        msg.setDstAddress({{0,0,0,0,0,0}, (pthread_t)0});
-        msg.setType(Ethernet::TYPE_PTP_SYNC);
-        msg.setPeriod(0);
-        communicator.send(&msg);
-        //std::cout << "Sync enviado" << std::endl;
-    }
-
-    // Envia mensagem de anúncio
-    void sendAnnounce(Communicator& communicator) {
-        Message msg;
-        msg.setDstAddress({{0,0,0,0,0,0}, (pthread_t)0});
-        msg.setType(Ethernet::TYPE_PTP_ANNOUNCE);
-        msg.setPeriod(0);
-        communicator.send(&msg);
+        pthread_exit(NULL);
     }
 
     // Exibe endereço MAC formatado
@@ -270,13 +179,13 @@ private:
     DataPublisher* dataPublisher;
     Protocol* protocol;
 
-    // Identidade do componente (MAC + thread ID)
     pthread_t thread;
     Ethernet::Address address;
+
+    // Informações do Grandmaster
     Ethernet::Address grandmasterAddress;
 
     std::vector<Ethernet::Type> types;  // Tipos de mensagens PTP observados
-    bool isGrandmaster = false;
     bool running = true;
 
     // Marcas de tempo usadas nos cálculos PTP
@@ -295,19 +204,6 @@ private:
     // Offset do GM atual.
     std::chrono::microseconds clockOffset{0};
 
-    // Intervalos de tempo para eventos periódicos
-    std::chrono::milliseconds syncInterval{100};
-    Clock::time_point lastSyncTime = Clock::now();
-
-    std::chrono::milliseconds announceInterval{500};
-    Clock::time_point lastAnnounceTime = Clock::now();
-
-    std::chrono::milliseconds bmcaInterval{3000};
-    Clock::time_point lastBMCATime = Clock::now();
-
-    std::chrono::milliseconds shareTimeInterval{1000};
+    std::chrono::milliseconds shareTimeInterval{10000};
     Clock::time_point lastShareTime = Clock::now();
-
-    // Conjunto para armazenar participantes do BMCA detectados por mensagens Announce
-    std::set<Ethernet::Address> bmcaParticipants;
 };

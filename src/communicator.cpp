@@ -24,7 +24,7 @@ Communicator::~Communicator() {
 
 bool Communicator::send(const Message* message) {
     return (_protocol->send(_address, message->getDstAddress(), message->getType(),
-            message->getPeriod(), message->data(), message->size()) > 0);
+            message->getPeriod(), message->getGroupID(), message->getMAC(), message->data(), message->size()) > 0);
 }
 
 bool Communicator::receive(Message* message) {
@@ -38,6 +38,8 @@ bool Communicator::receive(Message* message) {
     message->setType(received_message.getType());
     message->setPeriod(received_message.getPeriod());
     message->setTimestamp(received_message.getTimestamp());
+    message->setGroupID(received_message.getGroupID());
+    message->setMAC(received_message.getMAC());
     
     // Copia o conteúdo da mensagem recebida para a mensagem do comunicador.
     message->setData(received_message.data(), received_message.size());
