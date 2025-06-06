@@ -34,9 +34,8 @@ public:
         print_address(vehicleID);
         std::cout << " | Offset inicial do relógio: " << defaultClockOffset.count() << " µs\n" << std::endl;
         
-        // Tipos de mensagens PTP que serão recebidas.
+        // Tipos de mensagens de interesse PTP que serão recebidas.
         types.push_back(Ethernet::TYPE_PTP_SYNC);
-        types.push_back(Ethernet::TYPE_PTP_DELAY_RESP);
 
         // Cria e inicia a thread de sincronização
         ThreadData* data = new ThreadData{this};

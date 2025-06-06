@@ -27,10 +27,8 @@ class RSUHandler {
 
             address.vehicle_id = vehicleID;
 
-            // Registra os tipos de mensagens que serao recebidas.
+            // Registra os tipos de mensagens de interesse que serao recebidas.
             types.push_back(Ethernet::TYPE_PTP_SYNC);
-            types.push_back(Ethernet::TYPE_RSU_JOIN_RESP);
-            types.push_back(Ethernet::TYPE_POSITION_DATA);
 
             ThreadData* thread_data = new ThreadData{this};
 
@@ -191,10 +189,7 @@ class RSUHandler {
                             if (!first_position_received) {
                                 first_position_received = true;
                             }
-                            if (message.getDstAddress().component_id != pthread_self()) {
-                                // Se a mensagem nao eh para este veiculo, ignora.
-                                continue;
-                            }
+                            
                             position = *reinterpret_cast<Ethernet::Position*>(message.data());
                                 std::cout << "RSU Handler atualizou posicao do veiculo: "
                                           << "x: " << position.x << ", y: " << position.y << std::endl;
