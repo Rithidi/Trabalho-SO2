@@ -69,10 +69,6 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
     if (!_nic->fillPayload(&buf->frame, &payload)) {
         return -1; // Retorna -1 se o preenchimento falhar
     } 
-
-    if (_rsu_handler == nullptr && payload.header.type == Ethernet::TYPE_RSU_JOIN_RESP) {
-        std::cout << "RSU ENVIOU JOIN RESP" << std::endl;
-    }
     
     // Envia o frame Ethernet para a NIC
     return _nic->send(buf, is_internal);
@@ -131,10 +127,6 @@ void Protocol::receive(void* buf) {
     message.setGroupID(payload.header.group_id);         // Identificador do grupo
     message.setMAC(payload.header.mac);                  // MAC da mensagem
     message.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
-
-    if (message.getType() == Ethernet::TYPE_RSU_JOIN_RESP) {
-        std::cout << "PROTOCOL RECEBEU JOIN RESP" << std::endl;
-    }
 
     // Encaminha mensagens de interesse direto para o DataPublisher.
     if (pthread_equal(payload.header.dst_address.component_id, (pthread_t)0)) {

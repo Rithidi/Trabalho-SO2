@@ -30,9 +30,11 @@ public:
     // Construtor: inicializa variáveis, registra os tipos de mensagens PTP e inicia a thread de sincronização
     TimeSyncManager(DataPublisher* dataPublisher, Protocol* protocol, Ethernet::Mac_Address vehicleID)
         : dataPublisher(dataPublisher), protocol(protocol), running(true) {
-
+        
+        /*
         print_address(vehicleID);
         std::cout << " | Offset inicial do relógio: " << defaultClockOffset.count() << " µs\n" << std::endl;
+        */
         
         // Tipos de mensagens de interesse PTP que serão recebidas.
         types.push_back(Ethernet::TYPE_PTP_SYNC);
@@ -62,9 +64,10 @@ public:
     }
 
     void setGrandmaster(Ethernet::Group_ID groupId, const Ethernet::Address& address) {
-        //clockOffset = std::chrono::microseconds(0); // Reseta o clockOffset ao definir o Grandmaster
         grandmasterAddress = address;            // Define o endereço do Grandmaster
         grandmasterGroupId = groupId;            // Define o ID do grupo do Grandmaster
+        print_address(address.vehicle_id);
+        std::cout << " Lider Sincronizacao Temporal atualizado para RSU " << (int)groupId << std::endl;
     }
 
 private:
@@ -84,7 +87,7 @@ private:
                     case Ethernet::TYPE_PTP_SYNC:
                         // Verifica se o remetente é o Grandmaster
                         if (message.getGroupID() == self->grandmasterGroupId) {
-                            std::cout << "⏱️  Sincronizando tempo com a RSU " << (int)self->grandmasterGroupId << std::endl;
+                            //std::cout << "⏱️  Sincronizando tempo com a RSU " << (int)self->grandmasterGroupId << std::endl;
                             self->syncSendTime = message.getTimestamp();
                             self->syncRecvTime = self->now();
 

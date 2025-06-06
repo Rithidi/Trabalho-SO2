@@ -111,7 +111,7 @@ class RSUHandler {
                             Ethernet::Quadrant quadrant = *reinterpret_cast<Ethernet::Quadrant*>(message.data());
 
                             // Verifica se SYNC eh do proprio grupo.
-                            if (self->group_id == message.getGroupID()) {
+                            if (self->has_group && self->group_id == message.getGroupID()) {
                                 // Se sim, ignora SYNC.
                                 //std::cout << "RSU Handler recebeu SYNC do proprio grupo." << std::endl;
                             // Verifica se SYNC eh de um grupo vizinho.
@@ -161,19 +161,26 @@ class RSUHandler {
                             // Verifica se o veiculo ainda esta dentro do quadrante da RSU.
                             if (position.x >= quadrant.x_min && position.x <= quadrant.x_max &&
                                 position.y >= quadrant.y_min && position.y <= quadrant.y_max) {
+                                if (!self->has_group) { self->has_group = true; }
                                 // Atualiza novo grupo do veiculo.
                                 self->group_id = message.getGroupID();
                                 self->group_mac = message.getMAC();
                                 self->rsu_address = message.getSrcAddress();
+
+                                self->print_address(self->address.vehicle_id);
+                                std::cout << " ingressou no grupo da RSU " << (int)message.getGroupID() << std::endl;
+
                                 // Notifica TimeSyncManager sobre o novo lider.
                                 self->time_sync_manager->setGrandmaster(message.getGroupID(), message.getSrcAddress());
-                                std::cout << "Veiculo ingressou no grupo da RSU " << (int)message.getGroupID() << std::endl;
+                                
                                 // Verifica se o veiculo esta proximo do quadrante da RSU.
                             } else if (position.x >= quadrant.x_min - 10 && position.x <= quadrant.x_max + 10 &&
                                        position.y >= quadrant.y_min - 10 && position.y <= quadrant.y_max + 10) {
                                 // Adiciona grupo a estrutura de grupos vizinhos ao veiculo.
                                 self->neighbor_groups[message.getGroupID()] = {message.getSrcAddress(), message.getMAC()};
-                                std::cout << "Veiculo vizinho ao grupo da RSU " << (int)message.getGroupID() << std::endl;
+
+                                self->print_address(self->address.vehicle_id);
+                                std::cout << " vizinho ao grupo da RSU " << (int)message.getGroupID() << std::endl;
                                  break;
                             } else{
                                 break; // Se o veiculo nao esta dentro nem perto do quadrante, ignora JOIN_RESP.
@@ -181,13 +188,9 @@ class RSUHandler {
                             break;  
                         }
                         case Ethernet::TYPE_POSITION_DATA:
-                            if (!first_position_received) {
-                                first_position_received = true;
-                            }
-                            
+                            if (!first_position_received) { first_position_received = true; }
                             position = *reinterpret_cast<Ethernet::Position*>(message.data());
-                                std::cout << "RSU Handler atualizou posicao do veiculo: "
-                                          << "x: " << position.x << ", y: " << position.y << std::endl;
+                            //std::cout << "RSU Handler recebeu nova posicao do veiculo: "<< "x: " << position.x << ", y: " << position.y << std::endl;
                             break;
                         default:
                             break;
@@ -209,9 +212,12 @@ class RSUHandler {
             std::cout << std::dec;
         }
 
-    private: 
+    private:
+        // Variavel de status de grupo.
+        bool has_group = false;
+
         // Infos do grupo atual do veiculo.
-        Ethernet::Group_ID group_id;
+        Ethernet::Group_ID group_id=10;
         Ethernet::MAC_key group_mac;
         Ethernet::Address rsu_address;
 

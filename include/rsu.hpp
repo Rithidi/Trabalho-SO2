@@ -112,24 +112,23 @@ class RSU {
                     switch (message.getType()) {
                         case Ethernet::TYPE_RSU_JOIN_REQ:
                             // Responde veiculo com ID, MAC e Quadrante do grupo (RSU).
-                            self->print_address(message.getSrcAddress().vehicle_id);
-                            std::cout << " RSU " << (int)self->group_id << " recebeu JOIN_REQ" << std::endl;
+                            //std::cout << "RSU " << (int)self->group_id << " recebeu JOIN_REQ" << std::endl;
                             message.setType(Ethernet::TYPE_RSU_JOIN_RESP);
                             message.setDstAddress(message.getSrcAddress());
                             message.setGroupID(self->group_id);
                             message.setMAC(self->mac);
                             message.setPeriod(0);
                             message.setData(reinterpret_cast<Ethernet::Quadrant*>(&self->quadrant), sizeof(Ethernet::Quadrant));
-                            std::cout << "RSU " << (int)self->group_id << " enviou JOIN_RESP" << std::endl;
+                            //std::cout << "RSU " << (int)self->group_id << " enviou JOIN_RESP" << std::endl;
                             self->communicator->send(&message);
                             break;
                         case Ethernet::TYPE_PTP_DELAY_REQ:
                             // Responde veiculo com DELAY RESP.
-                            std::cout << "RSU " << (int)self->group_id << " recebeu DELAY_REQ" << std::endl;
+                            //std::cout << "RSU " << (int)self->group_id << " recebeu DELAY_REQ" << std::endl;
                             message.setType(Ethernet::TYPE_PTP_DELAY_RESP);
                             message.setDstAddress(message.getSrcAddress());
                             message.setPeriod(0);
-                            std::cout << "RSU " << (int)self->group_id << " enviou DELAY_RESP" << std::endl;
+                            //std::cout << "RSU " << (int)self->group_id << " enviou DELAY_RESP" << std::endl;
                             self->communicator->send(&message);
                             break;
                         default:

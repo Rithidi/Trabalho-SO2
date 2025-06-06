@@ -16,8 +16,8 @@ std::vector<Ethernet::Position> posicoes_iniciais_centro = {
 
 // Posições dos veiculos estaticos da borda do quadrante.
 std::vector<Ethernet::Position> posicoes_iniciais_borda = {
-    {50, 5},   // Quadrante 1
-    {-5, 50}, // Quadrante 2
+    {50, 5},    // Quadrante 1
+    {-5, 50},   // Quadrante 2
     {-50, -5},  // Quadrante 3
     {5, -50}    // Quadrante 4
 };
@@ -46,6 +46,8 @@ void* rotina_gps_estatico(void* arg) {
         posicao = posicoes_iniciais_borda[indice_posicao_global];
     }
 
+    std::cout << "Posição Veículo: x: " << posicao.x << ", y:" << posicao.y << std::endl;
+
     int num_respostas_enviadas = 0;
 
     while (num_respostas_enviadas < 10) {
@@ -58,7 +60,7 @@ void* rotina_gps_estatico(void* arg) {
             mensagem.setDstAddress(mensagem.getSrcAddress());
             mensagem.setData(reinterpret_cast<Ethernet::Position*>(&posicao), sizeof(Ethernet::Position));
             comunicador.send(&mensagem);
-            std::cout << "📬 " << dados->nome << ": Enviou posição." << std::endl;
+            //std::cout << "📬 " << dados->nome << ": Enviou posição." << std::endl;
             num_respostas_enviadas++;
         }
         std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -71,19 +73,20 @@ void* rotina_gps_estatico(void* arg) {
 }
 
 int main() {
+    std::cout << "\nCriando RSU para cada quadrante:" << std::endl;
     RSU rsu_1("enp0s1", 1, {0, 100, 0, 100});
-    RSU rsu_2("enp0s1", 2, {-100, -1, 0, 100});
-    RSU rsu_3("enp0s1", 3, {-100, -1, -100, -1});
-    RSU rsu_4("enp0s1", 4, {0, 100, -100, -1});
+    RSU rsu_2("enp0s1", 2, {-100, 0, 0, 100});
+    RSU rsu_3("enp0s1", 3, {-100, 0, -100, 0});
+    RSU rsu_4("enp0s1", 4, {0, 100, -100, 0});
 
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    // Cria processos para os veiculos estaticos dos quadrantes
+    std::cout << "\nCriando Veiculo estatico no centro de cada quadrante:" << std::endl;
+    // Cria processos para os veiculos estaticos do centro dos quadrantes
     pid_t pid;
     for (int i = 0; i < 4; ++i) {
+        std::cout << "\nQuadrante " << i+1 << std::endl;
         int idx = i;
-
-        // Cria Veiculos nos centros dos quadrantes.
         pid = fork();
         if (pid == 0) {
             centro = true;
@@ -92,8 +95,14 @@ int main() {
             veiculo.criar_componente("GPS", rotina_gps_estatico);
             return 0;
         }
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
 
-        // Cria Veiculos nas bordas dos quadrantes.
+    std::cout << "\nCriando Veiculo estatico na borda de cada quadrante:" << std::endl;
+    // Cria processos para os veiculos estaticos da borda dos quadrantes.
+    for (int i = 0; i < 4; ++i) {
+        std::cout << "\nQuadrante " << i+1 << std::endl;
+        int idx = i;
         pid = fork();
         if (pid == 0) {
             centro = false;
@@ -102,8 +111,7 @@ int main() {
             veiculo.criar_componente("GPS", rotina_gps_estatico);
             return 0;
         }
-
-        std::this_thread::sleep_for(std::chrono::seconds(20));
+        std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 
     // Espera todos os processos filhos terminarem
