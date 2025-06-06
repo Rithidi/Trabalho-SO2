@@ -52,6 +52,7 @@ public:
     // Destrutor: encerra a thread
     ~TimeSyncManager() {
         running = false;
+        pthread_join(thread, nullptr);
     }
 
     // Retorna o horário atual corrigido pelo offset calculado, em microssegundos

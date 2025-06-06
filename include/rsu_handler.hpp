@@ -30,6 +30,7 @@ class RSUHandler {
             // Registra os tipos de mensagens de interesse que serao recebidas.
             types.push_back(Ethernet::TYPE_PTP_SYNC);
 
+
             ThreadData* thread_data = new ThreadData{this};
 
             int err = pthread_create(&thread, nullptr, &RSUHandler::routine, thread_data);
@@ -109,14 +110,6 @@ class RSUHandler {
                             // Pega o quadrante da mensagem.
                             Ethernet::Quadrant quadrant = *reinterpret_cast<Ethernet::Quadrant*>(message.data());
 
-                            /*
-                            std::cout << (int)message.getGroupID() << " Quadrante recebido: "
-                                      << "x_min: " << quadrant.x_min << ", "
-                                      << "x_max: " << quadrant.x_max << ", "
-                                      << "y_min: " << quadrant.y_min << ", "
-                                      << "y_max: " << quadrant.y_max << std::endl;
-                            */
-
                             // Verifica se SYNC eh do proprio grupo.
                             if (self->group_id == message.getGroupID()) {
                                 // Se sim, ignora SYNC.
@@ -132,7 +125,7 @@ class RSUHandler {
                                 }
                             // Se SYNC eh de um grupo desconhecido: Verifica se o Veiculo esta dentro ou proximo do quadrante da RSU.
                             } else {
-                                std::cout << "RSU Handler recebeu SYNC de grupo desconhecido." << std::endl;
+                                //std::cout << "RSU Handler recebeu SYNC de grupo desconhecido." << std::endl;
                                 // Verifica se o Veiculo ja enviou JOIN_REQ para este grupo.
                                 if (self->join_reqts.count(message.getGroupID()) > 0) {
                                     std::cout << "Veiculo ja enviou JOIN_REQ para o grupo " << (int)message.getGroupID() << ", ignorando SYNC." << std::endl;
@@ -142,7 +135,8 @@ class RSUHandler {
                                 if (position.x >= quadrant.x_min - 10 && position.x <= quadrant.x_max + 10 &&
                                     position.y >= quadrant.y_min - 10 && position.y <= quadrant.y_max + 10) {
                                     // Se sim, envia JOIN_REQ para o grupo da RSU.
-                                    std::cout << "Veiculo dentro ou proximo ao quadrante do RSU " << (int)message.getGroupID() << ", enviando JOIN_REQ." << std::endl;
+                                    self->print_address(self->address.vehicle_id);
+                                    std::cout << " Veiculo dentro ou proximo ao quadrante do RSU " << (int)message.getGroupID() << ", enviando JOIN_REQ." << std::endl;
                                     // Envia mensagem de interesse em ingressar no grupo da RSU.
                                     Message joinRequest;
                                     joinRequest.setDstAddress(message.getSrcAddress());
@@ -152,10 +146,11 @@ class RSUHandler {
                                 }
                             }
                             break;
-                        }   
+                        }
                         case Ethernet::TYPE_RSU_JOIN_RESP:
-                        {
-                            std::cout << "RSU Handler recebeu JOIN_RESP da RSU " << (int)message.getGroupID() << std::endl;
+                        {   
+                            self->print_address(message.getDstAddress().vehicle_id);
+                            std::cout <<" RSU Handler recebeu JOIN_RESP da RSU " << (int)message.getGroupID() << std::endl;
 
                             // Remove o ID do grupo da lista de JOIN_REQs ja enviados.
                             self->join_reqts.erase(message.getGroupID());
@@ -178,8 +173,8 @@ class RSUHandler {
                                        position.y >= quadrant.y_min - 10 && position.y <= quadrant.y_max + 10) {
                                 // Adiciona grupo a estrutura de grupos vizinhos ao veiculo.
                                 self->neighbor_groups[message.getGroupID()] = {message.getSrcAddress(), message.getMAC()};
-                                std::cout << "Veiculo guardou grupo RSU " << (int)message.getGroupID() <<  " como vizinho." << std::endl;
-                                break;
+                                std::cout << "Veiculo vizinho ao grupo da RSU " << (int)message.getGroupID() << std::endl;
+                                 break;
                             } else{
                                 break; // Se o veiculo nao esta dentro nem perto do quadrante, ignora JOIN_RESP.
                             }
@@ -204,6 +199,16 @@ class RSUHandler {
             pthread_exit(NULL);
         }
 
+        // Exibe endereço MAC formatado
+        void print_address(const Ethernet::Mac_Address& vehicle_id) {
+            std::cout << "Vehicle ID: ";
+            for (size_t i = 0; i < vehicle_id.size(); ++i) {
+                std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(vehicle_id[i]);
+                if (i != vehicle_id.size() - 1) std::cout << ":";
+            }
+            std::cout << std::dec;
+        }
+
     private: 
         // Infos do grupo atual do veiculo.
         Ethernet::Group_ID group_id;
@@ -226,6 +231,6 @@ class RSUHandler {
         bool running = true;
 
         // Intervalo de tempo para enviar mensagem de interesse nos dados do GPS.
-        std::chrono::milliseconds gps_data_interval = std::chrono::milliseconds(4000);
+        std::chrono::milliseconds gps_data_interval = std::chrono::milliseconds(100);
         std::chrono::steady_clock::time_point last_gps_data_send_time = std::chrono::steady_clock::now();
 };

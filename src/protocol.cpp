@@ -68,7 +68,11 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
     // Preenche o payload do frame com os dados.
     if (!_nic->fillPayload(&buf->frame, &payload)) {
         return -1; // Retorna -1 se o preenchimento falhar
-    }   
+    } 
+
+    if (_rsu_handler == nullptr && payload.header.type == Ethernet::TYPE_RSU_JOIN_RESP) {
+        std::cout << "RSU ENVIOU JOIN RESP" << std::endl;
+    }
     
     // Envia o frame Ethernet para a NIC
     return _nic->send(buf, is_internal);
@@ -87,22 +91,31 @@ void Protocol::receive(void* buf) {
     // Libera o buffer após o uso
     delete buffer;
 
-    // Descarta mensagens externas de interesse ou respostas que nao pertencem ao grupo do Veiculo.
-    // Verifica se o endereço de origem e destino são diferentes.
-    if (payload.header.src_address.vehicle_id != payload.header.dst_address.vehicle_id) {
-        // Verifica se nao eh um Veiculo e nao eh nenhuma mensagem de sincronização PTP ou resposta de ingresso RSU.
-        if (_rsu_handler != nullptr && 
-            payload.header.type != Ethernet::TYPE_PTP_SYNC &&
-            payload.header.type != Ethernet::TYPE_PTP_DELAY_RESP &&
-            payload.header.type != Ethernet::TYPE_RSU_JOIN_RESP) {
-            // Verifica se a mensagem veio de algum grupo que o Veiculo nao pertence.
-            if (payload.header.group_id != _rsu_handler->getCurrentGroupID() ||
-                !_rsu_handler->isNeighborGroup(payload.header.group_id)) {
-                return; // Se o Veiculo nao pertence ao grupo, descarta a mensagem
-            } else {
-                // Verifica o MAC da mensagem.
-                if (!verify_mac(payload.header, _rsu_handler->getGroupMAC(payload.header.group_id))) {
-                    return; // Se o MAC for inválido, não processa a mensagem
+    // Descarta mensagens que não foram encaminhadas para esse veiculo.
+    std::array<uint8_t, 6> mac_nulo = {0, 0, 0, 0, 0, 0};
+    if (payload.header.dst_address.vehicle_id != mac_nulo &&
+        _nic->get_address() != payload.header.dst_address.vehicle_id) {
+        return;
+    }
+
+    // Verifica se mensagem de interesse/resposta veio do mesmo grupo ao qual o Veiculo pertence.
+    // Realiza esse descarte apenas se for Veiculo.
+    if (_rsu_handler != nullptr) {
+        // Verifica se mensagem eh externa.
+        if (payload.header.src_address.vehicle_id != payload.header.dst_address.vehicle_id) {
+            // Desconsidera mensagens enviadas pela RSU.
+            if (payload.header.type != Ethernet::TYPE_PTP_SYNC &&
+                payload.header.type != Ethernet::TYPE_PTP_DELAY_RESP &&
+                payload.header.type != Ethernet::TYPE_RSU_JOIN_RESP) {
+                // Verifica se a mensagem veio do grupo do Veiculo ou de um grupo vizinho.
+                if (payload.header.group_id != _rsu_handler->getCurrentGroupID() ||
+                    !_rsu_handler->isNeighborGroup(payload.header.group_id)) {
+                    return; // Se o Veiculo nao pertence ao grupo: descarta a mensagem
+                } else {
+                    // Se o Veiculo pertence ao grupo: verifica mac da mensagem.
+                    if (!verify_mac(payload.header, _rsu_handler->getGroupMAC(payload.header.group_id))) {
+                        return; // Se o MAC for inválido, não processa a mensagem
+                    }
                 }
             }
         }
@@ -118,6 +131,10 @@ void Protocol::receive(void* buf) {
     message.setGroupID(payload.header.group_id);         // Identificador do grupo
     message.setMAC(payload.header.mac);                  // MAC da mensagem
     message.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
+
+    if (message.getType() == Ethernet::TYPE_RSU_JOIN_RESP) {
+        std::cout << "PROTOCOL RECEBEU JOIN RESP" << std::endl;
+    }
 
     // Encaminha mensagens de interesse direto para o DataPublisher.
     if (pthread_equal(payload.header.dst_address.component_id, (pthread_t)0)) {

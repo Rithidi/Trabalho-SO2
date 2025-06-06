@@ -54,40 +54,8 @@ void Concurrent_Observed::notify(Message message) {
     // Extrai endereco de destino da mensagem.
     Ethernet::Address dst_address = message.getDstAddress();
     mutex.lock();
-
-    /*
-    // Verifica se encaminha por BROADCAST INTERNO: (todos componentes recebem, menos o que enviou)
-    // Utilizado quando: Endereco de destino nao foi preenchido. ((thread_id) == (pthread_t)0)
-    if (pthread_equal(dst_address.component_id, (pthread_t)0)) {
-        //std::cout << "Observer detectou: Broadcast interno" << std::endl;
-        // Notifica o observador de todos os componentes do veiculo menos o que enviou a mensagem.
-        for (Concurrent_Observer* obs : observers) {    
-            // Verifica se o observador eh diferente do componente que enviou a mensagem.
-            // Obs: Pode existir threads com o mesmo ID! por isso verificar o ID do veiculo tambem.
-            if (!pthread_equal(obs->communicator_address.component_id, src_address.component_id) ||
-                                obs->communicator_address.vehicle_id != src_address.vehicle_id) {
-                obs->update(message);
-            }
-        }
-    }
-    // Verifica se encaminha por DESTINO ESPECIFICO: (um unico componente recebe)
-    // Utilizado quando: Endereco de destino foi preenchido. ((thread_id) != (pthread_t)0)
-    else {
-        //std::cout << "Observer detectou: Destino especifico (component_id = " << dst_address.component_id << ")" << std::endl;
-        for (Concurrent_Observer* obs : observers) {
-            // Notifica o observador do componente de id especifico.
-            if (obs->communicator_address.component_id == dst_address.component_id) {
-                obs->update(message);
-                break;
-            }
-        }
-    }
-    */
-    
-    // Verifica se encaminha por DESTINO ESPECIFICO: (um unico componente recebe)
     // Utilizado quando: Endereco de destino foi preenchido. ((thread_id) != (pthread_t)0)
     if (!pthread_equal(dst_address.component_id, (pthread_t)0)) {
-        //std::cout << "Observer detectou: Destino especifico (component_id = " << dst_address.component_id << ")" << std::endl;
         for (Concurrent_Observer* obs : observers) {
             // Notifica o observador do componente de id especifico.
             if (obs->communicator_address.component_id == dst_address.component_id) {
@@ -96,7 +64,6 @@ void Concurrent_Observed::notify(Message message) {
             }
         }
     }
-
     mutex.unlock();
 }
 

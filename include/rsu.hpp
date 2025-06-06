@@ -72,7 +72,7 @@ class RSU {
 
             std::unique_lock<std::mutex> lock(self->mutex);
             while (self->running) {
-                next_send += std::chrono::milliseconds(2000);
+                next_send += std::chrono::milliseconds(100);
 
                 // Envia PTP_SYNC junto com ID e Quadrante da RSU.
                 Message message;
@@ -82,7 +82,7 @@ class RSU {
                 //std::cout << "RSU " << (int)message.getGroupID() << " enviando SYNC" << std::endl;
                 message.setData(reinterpret_cast<Ethernet::Quadrant*>(&self->quadrant), sizeof(Ethernet::Quadrant));
                 message.setPeriod(0);
-                std::cout << "RSU " << (int)self->group_id << " enviou SYNC" << std::endl;
+                //std::cout << "RSU " << (int)self->group_id << " enviou SYNC" << std::endl;
                 self->communicator->send(&message);
 
                 self->cv.wait_until(lock, next_send, [&] { return !self->running; });
@@ -112,7 +112,8 @@ class RSU {
                     switch (message.getType()) {
                         case Ethernet::TYPE_RSU_JOIN_REQ:
                             // Responde veiculo com ID, MAC e Quadrante do grupo (RSU).
-                            std::cout << "RSU " << (int)self->group_id << " recebeu JOIN_REQ" << std::endl;
+                            self->print_address(message.getSrcAddress().vehicle_id);
+                            std::cout << " RSU " << (int)self->group_id << " recebeu JOIN_REQ" << std::endl;
                             message.setType(Ethernet::TYPE_RSU_JOIN_RESP);
                             message.setDstAddress(message.getSrcAddress());
                             message.setGroupID(self->group_id);
@@ -162,6 +163,16 @@ class RSU {
                 }
             }
             return oss.str();
+        }
+
+        // Exibe endereço MAC formatado
+        void print_address(const Ethernet::Mac_Address& vehicle_id) {
+            std::cout << "Vehicle ID: ";
+            for (size_t i = 0; i < vehicle_id.size(); ++i) {
+                std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(vehicle_id[i]);
+                if (i != vehicle_id.size() - 1) std::cout << ":";
+            }
+            std::cout << std::dec;
         }
 
     private:
