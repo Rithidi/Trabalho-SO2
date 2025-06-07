@@ -128,16 +128,6 @@ void* rotina_sensor_gps(void* arg) {
     pthread_exit(NULL);
 }
 
-
-void* rotina(void* arg) {
-    Veiculo::DadosComponente* dados = (Veiculo::DadosComponente*)arg;
-    Communicator comunicador(dados->protocolo, dados->id_veiculo, pthread_self());
-
-    sleep(10);
-    delete dados;
-    pthread_exit(NULL);
-}
-
 // Funcao de teste de comunicação externa.
 int main(int argc, char *argv[]) {
     if (argc < 2) {

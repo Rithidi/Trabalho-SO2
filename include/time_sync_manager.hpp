@@ -54,7 +54,6 @@ public:
     // Destrutor: encerra a thread
     ~TimeSyncManager() {
         running = false;
-        pthread_join(thread, nullptr);
     }
 
     // Retorna o horário atual corrigido pelo offset calculado, em microssegundos
@@ -79,7 +78,7 @@ private:
         Communicator communicator(self->protocol, self->address.vehicle_id, pthread_self());
         self->dataPublisher->subscribe(communicator.getObserver(), &self->types);
 
-        while (self->running) {
+        while (true) {
             if (communicator.hasMessage()) {
                 Message message;
                 communicator.receive(&message);

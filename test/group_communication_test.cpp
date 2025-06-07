@@ -50,7 +50,7 @@ void* rotina_gps_estatico(void* arg) {
 
     int num_respostas_enviadas = 0;
 
-    while (num_respostas_enviadas < 10) {
+    while (num_respostas_enviadas < 5) {
         Message mensagem;
         comunicador.receive(&mensagem);
 
@@ -60,14 +60,16 @@ void* rotina_gps_estatico(void* arg) {
             mensagem.setDstAddress(mensagem.getSrcAddress());
             mensagem.setData(reinterpret_cast<Ethernet::Position*>(&posicao), sizeof(Ethernet::Position));
             comunicador.send(&mensagem);
-            //std::cout << "📬 " << dados->nome << ": Enviou posição." << std::endl;
+            std::cout << "📬 " << dados->nome << ": Enviou posição." << std::endl;
             num_respostas_enviadas++;
         }
         std::this_thread::sleep_for(std::chrono::seconds(5));
     }
     // Remove o observador do DataPublisher.
     dados->data_publisher->unsubscribe(comunicador.getObserver());
-        
+    
+    std::cout << "GPS FINALIZOU" << std::endl;
+
     delete dados;
     pthread_exit(NULL);
 }
@@ -79,15 +81,16 @@ int main() {
     RSU rsu_3("enp0s1", 3, {-100, 0, -100, 0});
     RSU rsu_4("enp0s1", 4, {0, 100, -100, 0});
 
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    std::cout << "PID DO PROCESSO PAI: " << getppid() << std::endl;
 
     std::cout << "\nCriando Veiculo estatico no centro de cada quadrante:" << std::endl;
     // Cria processos para os veiculos estaticos do centro dos quadrantes
-    pid_t pid;
     for (int i = 0; i < 4; ++i) {
         std::cout << "\nQuadrante " << i+1 << std::endl;
         int idx = i;
-        pid = fork();
+        pid_t pid = fork();
         if (pid == 0) {
             centro = true;
             indice_posicao_global = idx;
@@ -95,7 +98,7 @@ int main() {
             veiculo.criar_componente("GPS", rotina_gps_estatico);
             return 0;
         }
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
     }
 
     std::cout << "\nCriando Veiculo estatico na borda de cada quadrante:" << std::endl;
@@ -103,7 +106,7 @@ int main() {
     for (int i = 0; i < 4; ++i) {
         std::cout << "\nQuadrante " << i+1 << std::endl;
         int idx = i;
-        pid = fork();
+        pid_t pid = fork();
         if (pid == 0) {
             centro = false;
             indice_posicao_global = idx;
@@ -111,11 +114,19 @@ int main() {
             veiculo.criar_componente("GPS", rotina_gps_estatico);
             return 0;
         }
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+    }
+
+    // Após criar todos os filhos, imprime os PIDs deles
+    std::cout << "\nProcesso pai (PID " << getpid() << ") criou os seguintes filhos:\n";
+    for (pid_t pid : filhos) {
+        std::cout << " - Filho com PID: " << pid << std::endl;
     }
 
     // Espera todos os processos filhos terminarem
     while (wait(NULL) > 0);
+
+    std::cout << "PROCESSO PAI TERMINOU." << std::endl;
 
     //std::this_thread::sleep_for(std::chrono::seconds(30));
 

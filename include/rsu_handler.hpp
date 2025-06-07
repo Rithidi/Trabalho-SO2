@@ -30,7 +30,6 @@ class RSUHandler {
             // Registra os tipos de mensagens de interesse que serao recebidas.
             types.push_back(Ethernet::TYPE_PTP_SYNC);
 
-
             ThreadData* thread_data = new ThreadData{this};
 
             int err = pthread_create(&thread, nullptr, &RSUHandler::routine, thread_data);
@@ -43,7 +42,6 @@ class RSUHandler {
 
         ~RSUHandler() {
             running = false;
-            pthread_join(thread, nullptr);
         }
 
         // Metodo para verificar se o veiculo eh vizinho de um determinado grupo.
@@ -81,7 +79,7 @@ class RSUHandler {
             Ethernet::Position position;
             bool first_position_received = false;
 
-            while (self->running) {
+            while (true) {
                 // Verifica se o intervalo de tempo para enviar dados do GPS foi atingido.
                 if (std::chrono::steady_clock::now() - self->last_gps_data_send_time >= self->gps_data_interval) {
                     // Envia mensagem de interesse nos dados do GPS.
