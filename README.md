@@ -30,6 +30,8 @@ Esse comando irá compilar todos os testes localizados em ./tests/, gerando exec
 
 -> time_sync_test
 
+-> group_communication_test
+
 Para compilar um teste especifico, utilize: make nome_teste
 
 
@@ -42,7 +44,55 @@ sudo ./<nome_teste> <interface_de_rede> [parâmetros_opcionais]
 
 # ✅ Testes Disponíveis
 
-1️⃣ Teste de sincronização temporal (time_sync_test)
+1️⃣ Teste de comunicação em grupos (group_communication_test)
+Simula um ambiente dividido em quatro quadrantes (grupos), cada um associado a uma RSU líder local.
+Em cada quadrante, são criados veículos estáticos, que mantêm a mesma posição durante toda a simulação:
+
+Um veículo estático é posicionado no centro do quadrante.
+
+Outro é posicionado na borda do quadrante.
+
+Esses veículos solicitam dados de posição a um componente GPS Estático interno.
+
+Além disso, há um veículo dinâmico que percorre o ambiente passando por todos os quadrantes em sentido anti-horário.
+Ele parte do centro do primeiro quadrante, visitando o centro e a borda dos demais.
+
+Esse veículo consulta um GPS Dinâmico, que fornece sua posição atualizada ao longo do tempo.
+Ele também possui um componente Detector de Veículos, responsável por identificar veículos próximos com base nas informações de localização.
+
+A ideia principal é que o veículo dinâmico, ao se mover, consiga se comunicar com veículos pertencentes ao mesmo grupo ou aos grupos vizinhos.
+Dessa forma, o componente de detecção pode continuamente identificar os veículos ao redor que estejam no mesmo grupo ou sejam vizinhos.
+
+    🧵 Componentes
+    RSU (classe): Realiza lógica de líder do grupo e de sincronização temporal.
+
+    Veículo (classe): Instancia os componentes.
+
+    GPS Dinâmico (thread): Fornece posições atualizadas dinamicamente durante a simulação.
+
+    GPS Estático (thread): Fornece posição fixa (inalterada) durante toda a simulação.
+
+    Detector de Veículos (thread): Solicita dados de posição aos sensores GPS e identifica veículos próximos.
+
+    🔧 Como Executar
+
+    sudo ./group_communication_test <interface> [intervalo_criacao] [intervalo_posicao] [num_voltas] [periodo_deteccao]
+
+    <interface>: Interface de rede (ex: eth0, wlan0)
+
+    [intervalo_criacao]: (Opcional) Intervalo de tempo (ms) entre a criação dos veículos (padrão: 500)
+
+    [intervalo_posicao]: (Opcional) Intervalo de tempo (ms) em que o veículo dinamico avança sua posição (padrão: 2000)
+
+    [num_voltas]: (Opcional) Número de voltas que o veículo dinâmico realiza durante o teste (padrão: 1)
+
+    [periodo_deteccao]: (Opcional) Periodo de envio das mensagens de interesse do DetectorVeiculos (padrão: 500)
+
+    Exemplo:
+
+    sudo ./time_sync_test eth0 2000 3000 2 500
+
+2️⃣ Teste de sincronização temporal (time_sync_test)
 Simula o aparecimento de veiculos ao longo do tempo para acompanhar o funcionamento da classe TimeSyncManager durante o processo de sincronização de tempo.
 Imprime etapas realizadas no processo de de sincronização de tempo.
     🔧 Como Executar
@@ -63,7 +113,7 @@ Imprime etapas realizadas no processo de de sincronização de tempo.
 
     sudo ./time_sync_test eth0 1 3 5 15
 
-2️⃣ Comunicação Interna (internal_communication_test)
+3️⃣ Comunicação Interna (internal_communication_test)
 Valida a comunicação entre componentes dentro do mesmo veículo. Cada Controlador envia requisições periódicas aos Sensores de Temperatura, que respondem com dados simulados.
 
     🧵 Componentes
@@ -93,7 +143,7 @@ Valida a comunicação entre componentes dentro do mesmo veículo. Cada Controla
 
     sudo ./internal_communication_test eth0 5 3 10 10 100
 
-3️⃣ Comunicação Externa (external_communication_test)
+4️⃣ Comunicação Externa (external_communication_test)
 Simula a interação entre veículos diferentes. Um Detector de Veículos envia requisições periódicas para sensores GPS de outros veículos, que respondem com suas posições.
 
     🧵 Componentes
