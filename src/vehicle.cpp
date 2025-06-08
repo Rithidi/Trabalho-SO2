@@ -8,11 +8,9 @@ Veiculo::Veiculo(const std::string& interface, const std::string& nome)
 
 // Destrutor: espera todas as threads terminarem antes de destruir o objeto
 Veiculo::~Veiculo() {
-    std::cout << "Destrutor chamado." << std::endl;
     for (auto& thread : threads) {
         pthread_join(thread, nullptr); // Aguarda cada thread finalizar
     }
-    std::cout << "PROCESSO FILHO "<< getpid() << " TERMINOU (PAI: " << getppid() << ")" << std::endl;
 }
 
 // Método para criar uma nova thread componente
