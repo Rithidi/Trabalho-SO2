@@ -94,6 +94,10 @@ void* rotina_gps_dinamico(void* arg) {
     int num_voltas_realizadas = 0;
 
     while (num_voltas_realizadas < NUM_VOLTAS) {
+        if (idx_posicao == 0) {
+            std::cout << "Iniciou volta número: " << num_voltas_realizadas + 1 << std::endl;
+        }
+
         Message mensagem;
         comunicador.receive(&mensagem);
         // Verifica se a mensagem é de interesse (não preencheu id componente no endereço de destino).
@@ -110,6 +114,10 @@ void* rotina_gps_dinamico(void* arg) {
                 idx_posicao = 0;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(INTERVALO_POSICAO));
+
+            if (idx_posicao == 0) {
+            std::cout << "\nTerminou volta número: " << num_voltas_realizadas << std::endl;
+        }
         }
     }
     // Remove o observador do DataPublisher.
@@ -201,7 +209,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "\n"
               << "============================================================\n"
-              << "🧪  TESTE: Comunicação e Reconhecimento de Veículos em Diferentes Grupos. \n"
+              << "👨‍👩‍👧‍👦  TESTE: Comunicação e Reconhecimento de Veículos em Diferentes Grupos. \n"
               << "------------------------------------------------------------\n"
               << " Cada grupo (quadrante) possui dois veículos estáticos: centro e borda.\n"
               << " Um Veículo Dinâmico circula entre todos os quadrantes no sentido anti-horário, \n"
