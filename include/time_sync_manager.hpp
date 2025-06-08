@@ -65,7 +65,7 @@ public:
     void setGrandmaster(Ethernet::Group_ID groupId, const Ethernet::Address& address) {
         grandmasterAddress = address;            // Define o endereço do Grandmaster
         grandmasterGroupId = groupId;            // Define o ID do grupo do Grandmaster
-        print_address(address.vehicle_id);
+        print_address(this->address.vehicle_id);
         std::cout << " Lider Sincronizacao Temporal atualizado para RSU " << (int)groupId << std::endl;
     }
 

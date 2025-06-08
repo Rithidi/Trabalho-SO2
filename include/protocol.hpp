@@ -33,9 +33,6 @@ public:
     int send(Address from, Address to, Type type, Period period, Group_ID group_id, MAC_key mac, const void* data, unsigned int size);
     void receive(void* buf);
 
-    Ethernet::MAC_key generate_mac(const Ethernet::Header& header, const Ethernet::MAC_key& group_key);
-    bool verify_mac(const Ethernet::Header& header, const Ethernet::MAC_key& group_key);
-
     void attach(Concurrent_Observer* obs);
     void detach(Concurrent_Observer* obs);
 

@@ -16,6 +16,19 @@ Protocol::~Protocol() {
 }
 
 int Protocol::send(Address from, Address to, Type type, Period period, Group_ID group_id, MAC_key mac, const void* data, unsigned int size) {
+    // Verifica se o destino da mensagem é interno ou externo.
+    bool is_internal = false;
+    if (from.vehicle_id == to.vehicle_id) {
+        is_internal = true;
+    }
+
+    // Descarta envio de mensagens de interesse/resposta externas
+    //   se o Veiculo ainda nao faz parte de nenhum grupo.
+    if (_rsu_handler != nullptr && !is_internal &&
+        !_rsu_handler->hasGroup() && type != Ethernet::TYPE_RSU_JOIN_REQ) {
+        return -1;
+    }
+
     // Pede para a NIC alocar um buffer para o frame Ethernet
     Buffer* buf = _nic->alloc();
 
@@ -49,18 +62,15 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
     // Preenche o timestamp.
     payload.header.timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();   // Horario de envio
 
-    bool is_internal = false;
-
-    // Verifica se o endereço MAC de origem e destino são iguais
-    if (from.vehicle_id == to.vehicle_id) {
-        is_internal = true; // Define como interno se os endereços forem iguais
-    }
-
-    // Preenche o MAC da mensagem.
-    if (!is_internal && _rsu_handler != nullptr &&
+    // Preenche grupo e mac da mensagem (apenas veiculos).
+    if (_rsu_handler != nullptr && !is_internal &&
         payload.header.type != Ethernet::TYPE_PTP_DELAY_REQ &&
         payload.header.type != Ethernet::TYPE_RSU_JOIN_REQ) {
-        payload.header.mac = generate_mac(payload.header, _rsu_handler->getGroupMAC(_rsu_handler->getCurrentGroupID()));
+        // Preenche id do grupo.
+        payload.header.group_id = _rsu_handler->getCurrentGroupID();
+        // Preenche MAC da mensagem.
+        payload.header.mac = _rsu_handler->generate_mac(payload.header, _rsu_handler->getGroupMAC(payload.header.group_id));
+        //std::cout << "ENVIANDO MSG COM ID DO GRUPO: " << (int)payload.header.group_id << std::endl;
     }
 
     std::memcpy(payload.data, data, size);  // Dados da mensagem
@@ -87,31 +97,40 @@ void Protocol::receive(void* buf) {
     // Libera o buffer após o uso
     delete buffer;
 
+    // Se for RSU: descarta qual mensagem que nao seja JOIN REQ ou DELAY REQ.
+    if (_rsu_handler == nullptr && 
+        payload.header.type != Ethernet::TYPE_PTP_DELAY_REQ &&
+        payload.header.type != Ethernet::TYPE_RSU_JOIN_REQ) {
+        return;
+    }
+
     // Descarta mensagens que não foram encaminhadas para esse veiculo.
-    std::array<uint8_t, 6> mac_nulo = {0, 0, 0, 0, 0, 0};
+    std::array<uint8_t, 6> mac_nulo = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     if (payload.header.dst_address.vehicle_id != mac_nulo &&
         _nic->get_address() != payload.header.dst_address.vehicle_id) {
         return;
     }
 
-    // Verifica se mensagem de interesse/resposta veio do mesmo grupo ao qual o Veiculo pertence.
-    // Realiza esse descarte apenas se for Veiculo.
+    // Descarta mensagens de interesse/respostas externas que: nao pertencem
+    // ao grupo do veiculo, ou a nenhum grupo vizinho, ou que foram adulteradas.
     if (_rsu_handler != nullptr) {
         // Verifica se mensagem eh externa.
-        if (payload.header.src_address.vehicle_id != payload.header.dst_address.vehicle_id) {
+        if (payload.header.src_address.vehicle_id != _nic->get_address()) {
             // Desconsidera mensagens enviadas pela RSU.
             if (payload.header.type != Ethernet::TYPE_PTP_SYNC &&
                 payload.header.type != Ethernet::TYPE_PTP_DELAY_RESP &&
                 payload.header.type != Ethernet::TYPE_RSU_JOIN_RESP) {
-                // Verifica se a mensagem veio do grupo do Veiculo ou de um grupo vizinho.
-                if (payload.header.group_id != _rsu_handler->getCurrentGroupID() ||
+                // Descarta mensagens de grupos que o veiculo nao pertence e nao eh vizinho.
+                if (payload.header.group_id != _rsu_handler->getCurrentGroupID() &&
                     !_rsu_handler->isNeighborGroup(payload.header.group_id)) {
-                    return; // Se o Veiculo nao pertence ao grupo: descarta a mensagem
+                    return;
                 } else {
-                    // Se o Veiculo pertence ao grupo: verifica mac da mensagem.
-                    if (!verify_mac(payload.header, _rsu_handler->getGroupMAC(payload.header.group_id))) {
-                        return; // Se o MAC for inválido, não processa a mensagem
+                    //std::cout << (int)_rsu_handler->getCurrentGroupID() << " RECEBEU INTERESSE EM POSICAO DO GRUPO: " << (int)payload.header.group_id << std::endl;
+                    // Verifica MAC da mensagem.
+                    if (!_rsu_handler->verify_mac(payload.header)) {
+                        return; // Descarta mensagem se MAC invalido.
                     }
+                    //std::cout << "MAC VALIDADO: PROCESSANDO MENSAGEM." << std::endl;
                 }
             }
         }
@@ -135,30 +154,6 @@ void Protocol::receive(void* buf) {
         // Notifica os observadores com o endereço de destino e a mensagem
         _observed.notify(message);
     }
-}
-
-// Gera o MAC (Message Authentication Code) com o cabeçalho da mensagem usando a chave do grupo
-Ethernet::MAC_key Protocol::generate_mac(const Ethernet::Header& header, const Ethernet::MAC_key& group_key) {
-    Ethernet::MAC_key mac;
-
-    const unsigned char* data = reinterpret_cast<const unsigned char*>(&header);
-    size_t header_size = sizeof(Ethernet::Header) - sizeof(Ethernet::MAC_key); // exclui o campo MAC
-
-    // Inicializa mac com a chave do grupo
-    std::memcpy(mac.data(), group_key.data(), 16);
-
-    // XOR byte a byte com os bytes do header (exceto MAC)
-    for (size_t i = 0; i < header_size; ++i) {
-        mac[i % 16] ^= data[i];
-    }
-
-    return mac;
-}
-
-// Verifica se o MAC da mensagem corresponde ao esperado
-bool Protocol::verify_mac(const Ethernet::Header& header, const Ethernet::MAC_key& group_key) {
-    Ethernet::MAC_key expected_mac = generate_mac(header, group_key);
-    return expected_mac == header.mac;
 }
 
 void Protocol::attach(Concurrent_Observer* obs) {
