@@ -17,6 +17,7 @@ class DataPublisher {
     // Estrutura que armazena os recursos de controle de uma thread periódica.
     struct ThreadControl {
         std::thread thread;                    // Thread que envia mensagens periodicamente.
+        Message message;                       // Mensagem que sera enviada periodicamente.
         std::condition_variable* cv;           // Variável de condição usada para interromper a espera.
         std::mutex* mtx;                       // Mutex usada junto da variável de condição.
         bool* stop_flag;                       // Flag que sinaliza a thread para parar.
@@ -31,6 +32,9 @@ public:
 
     // Recebe uma nova mensagem e distribui para os componentes interessados.
     void notify(Message message);
+
+    // Encerra todas as threads periodicas associadas a um determinado grupo.
+    void delete_group_threads(Ethernet::Group_ID group_id);
 
 private:
     // Cria uma thread periódica que envia uma mensagem a um observador em intervalos fixos.

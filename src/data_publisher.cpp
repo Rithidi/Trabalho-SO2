@@ -55,7 +55,7 @@ void DataPublisher::create_periodic_thread(Concurrent_Observer* obsCommunicator,
     std::thread t(&DataPublisher::publish_loop, this, cv, mtx, stop_flag, obsCommunicator, message, period_ms);
 
     // Armazena os recursos da thread
-    ThreadControl control{ std::move(t), cv, mtx, stop_flag };
+    ThreadControl control{ std::move(t), message, cv, mtx, stop_flag };
 
     std::lock_guard<std::mutex> lock(threads_mutex);
     threads[obsCommunicator].push_back(std::move(control));
@@ -97,5 +97,28 @@ void DataPublisher::publish_loop(std::condition_variable* cv, std::mutex* mtx, b
 
         // Aguarda até o próximo envio ou até ser sinalizado para parar
         cv->wait_until(lock, next_send, [&]() { return *stop_flag; });
+    }
+}
+
+// Encerra todas as threads periodicas associadas a um determinado grupo.
+void DataPublisher::delete_group_threads(Ethernet::Group_ID group_id) {
+    std::lock_guard<std::mutex> lock(threads_mutex);
+    for (auto& [obs, vector] : threads) { // Itera sobre os componentes inscritos.
+        for (auto& control : vector) {  // Itera sobre as threads periodicas de cada inscrito.
+            // Se for interesse externo e do grupo: finaliza thread periodica.
+            if (control.message.getSrcAddress().vehicle_id != control.message.getDstAddress().vehicle_id) {
+                if (control.message.getGroupID() == group_id) {
+                    {
+                        std::lock_guard<std::mutex> lock(*control.mtx);
+                        *control.stop_flag = true; // Sinaliza a parada da thread
+                    }
+                    control.cv->notify_all();
+                    // Libera os recursos alocados
+                    delete control.cv;
+                    delete control.mtx;
+                    delete control.stop_flag;
+                }
+            }
+        }
     }
 }

@@ -167,7 +167,9 @@ class RSUHandler {
                             if (self->neighbor_groups.count(group_id)) {
                                 // Se o veículo se afastou do quadrante do grupo vizinho, remove dos vizinhos.
                                 if (!near_quadrant) {
-                                    self->neighbor_groups.erase(group_id);
+                                    self->neighbor_groups.erase(group_id); // Remove grupo da estrutura de grupos vizinhos.
+                                    // Remove threads periodicas do DataPublisher destinadas ao antigo grupo vizinho.
+                                    self->data_publisher->delete_group_threads(self->group_id);
                                 }
                                 // Se o veículo entrou no quadrante, envia JOIN_REQ e remove dos vizinhos.
                                 else if (in_quadrant) {
@@ -227,7 +229,12 @@ class RSUHandler {
 
                             // Verifica se o veiculo ainda esta dentro do quadrante da RSU.
                             if (in_quadrant) {
-                                if (!self->has_group) { self->has_group = true; }
+                                if (!self->has_group) {
+                                    self->has_group = true;
+                                } else {
+                                    // Remove threads periodicas do DataPublisher destinadas ao grupo antigo.
+                                    self->data_publisher->delete_group_threads(self->group_id);
+                                }
                                 // Atualiza novo grupo do veiculo.
                                 self->group_id = message.getGroupID();
                                 self->group_mac = message.getMAC();
