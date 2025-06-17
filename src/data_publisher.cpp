@@ -101,7 +101,7 @@ void DataPublisher::publish_loop(std::condition_variable* cv, std::mutex* mtx, b
 }
 
 // Encerra todas as threads periodicas associadas a um determinado grupo.
-void DataPublisher::delete_group_threads(Ethernet::Group_ID group_id) {
+void DataPublisher::delete_group_threads(Ethernet::Quadrant_ID group_id) {
     std::lock_guard<std::mutex> lock(threads_mutex);
     for (auto& [obs, vector] : threads) { // Itera sobre os componentes inscritos.
         for (auto& control : vector) {  // Itera sobre as threads periodicas de cada inscrito.

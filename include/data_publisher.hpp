@@ -34,7 +34,7 @@ public:
     void notify(Message message);
 
     // Encerra todas as threads periodicas associadas a um determinado grupo.
-    void delete_group_threads(Ethernet::Group_ID group_id);
+    void delete_group_threads(Ethernet::Quadrant_ID group_id);
 
 private:
     // Cria uma thread periódica que envia uma mensagem a um observador em intervalos fixos.

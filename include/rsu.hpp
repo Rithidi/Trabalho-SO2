@@ -25,7 +25,7 @@ class RSU {
         };
         
         // Construtor.
-        RSU(const std::string& interface, Ethernet::Group_ID groupId, Ethernet::Quadrant quadt) : nic(interface), 
+        RSU(const std::string& interface, Ethernet::Quadrant_ID groupId, Ethernet::Quadrant quadt) : nic(interface), 
                 protocol(&nic, &data_publisher, 0x88B5), group_id(groupId), quadrant(quadt), running(true) {
             
             // Inicializa o MAC do grupo.
@@ -191,7 +191,7 @@ class RSU {
 
         std::vector<Ethernet::Type> types;
 
-        Ethernet::Group_ID group_id;
+        Ethernet::Quadrant_ID group_id;
         Ethernet::Quadrant quadrant;
         Ethernet::MAC_key mac;
         bool running;

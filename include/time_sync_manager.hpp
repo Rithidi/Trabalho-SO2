@@ -62,7 +62,7 @@ public:
                               std::chrono::duration_cast<Clock::duration>(clockOffset);
     }
 
-    void setGrandmaster(Ethernet::Group_ID groupId, const Ethernet::Address& address) {
+    void setGrandmaster(Ethernet::Quadrant_ID groupId, const Ethernet::Address& address) {
         grandmasterAddress = address;            // Define o endereço do Grandmaster
         grandmasterGroupId = groupId;            // Define o ID do grupo do Grandmaster
         print_address(this->address.vehicle_id);
@@ -177,7 +177,7 @@ private:
 
     // Informações do Grandmaster
     Ethernet::Address grandmasterAddress;
-    Ethernet::Group_ID grandmasterGroupId;
+    Ethernet::Quadrant_ID grandmasterGroupId;
 
     std::vector<Ethernet::Type> types;  // Tipos de mensagens PTP observados
     bool running = true;

@@ -45,12 +45,12 @@ class RSUHandler {
         }
 
         // Metodo para verificar se o veiculo eh vizinho de um determinado grupo.
-        bool isNeighborGroup(Ethernet::Group_ID group_id) const {
+        bool isNeighborGroup(Ethernet::Quadrant_ID group_id) const {
             return neighbor_groups.count(group_id) > 0;  // Retorna true se o grupo for vizinho
         }
 
         // Metodo para obter o MAC do grupo atual ou o MAC de um grupo vizinho.
-        Ethernet::MAC_key getGroupMAC(Ethernet::Group_ID group_id) const {
+        Ethernet::MAC_key getGroupMAC(Ethernet::Quadrant_ID group_id) const {
             // Verifica se o grupo eh vizinho.
             if (neighbor_groups.count(group_id) > 0) {
                 return neighbor_groups.at(group_id).group_mac;  // Retorna o MAC do grupo vizinho
@@ -76,7 +76,7 @@ class RSUHandler {
 
             // Calcula o tamanho do cabeçalho sem o campo MAC (últimos 17 bytes: 16 de MAC + 1 de group_id)
             constexpr size_t mac_offset = offsetof(Ethernet::Header, mac);
-            constexpr size_t mac_field_size = sizeof(Ethernet::MAC_key) + sizeof(Ethernet::Group_ID);
+            constexpr size_t mac_field_size = sizeof(Ethernet::MAC_key) + sizeof(Ethernet::Quadrant_ID);
             const size_t size_to_hash = sizeof(Ethernet::Header) - mac_field_size;
 
             // Faz XOR do conteúdo do header com os 16 bytes do MAC base
@@ -103,7 +103,7 @@ class RSUHandler {
         }
 
         // Metodo para obter o ID do grupo atual.
-        Ethernet::Group_ID getCurrentGroupID() const {
+        Ethernet::Quadrant_ID getCurrentGroupID() const {
             return group_id;
         }
 
@@ -289,14 +289,14 @@ class RSUHandler {
         bool has_group = false;
 
         // Infos do grupo atual do veiculo.
-        Ethernet::Group_ID group_id;
+        Ethernet::Quadrant_ID group_id;
         Ethernet::MAC_key group_mac;
         Ethernet::Address rsu_address;
 
         // Grupos que o veiculo faz divisa.
-        std::map<Ethernet::Group_ID, GroupData> neighbor_groups;
+        std::map<Ethernet::Quadrant_ID, GroupData> neighbor_groups;
 
-        std::set<Ethernet::Group_ID> join_reqts;         // ID dos grupos que o veiculo ja encaminhou JOIN_REQ
+        std::set<Ethernet::Quadrant_ID> join_reqts;         // ID dos grupos que o veiculo ja encaminhou JOIN_REQ
 
         DataPublisher* data_publisher;                   // Publicador de dados
         TimeSyncManager* time_sync_manager;              // Gerenciador de sincronização de tempo

@@ -15,7 +15,7 @@ Protocol::~Protocol() {
     _nic->detach(&_data_observer);
 }
 
-int Protocol::send(Address from, Address to, Type type, Period period, Group_ID group_id, MAC_key mac, const void* data, unsigned int size) {
+int Protocol::send(Address from, Address to, Type type, Period period, Quadrant_ID group_id, MAC_key mac, const void* data, unsigned int size) {
     // Verifica se o destino da mensagem é interno ou externo.
     bool is_internal = false;
     if (from.vehicle_id == to.vehicle_id) {
@@ -45,7 +45,7 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
     payload.header.dst_address = to;        // Endereço de destino
     payload.header.type = type;             // Tipo da mensagem
     payload.header.period = period;         // Período de transmissão
-    payload.header.group_id = group_id;     // Identificador do grupo
+    payload.header.quadrant_id = group_id;     // Identificador do grupo
     payload.header.mac = mac;               // MAC da mensagem
 
     std::chrono::system_clock::time_point now;
@@ -67,9 +67,9 @@ int Protocol::send(Address from, Address to, Type type, Period period, Group_ID 
         payload.header.type != Ethernet::TYPE_PTP_DELAY_REQ &&
         payload.header.type != Ethernet::TYPE_RSU_JOIN_REQ) {
         // Preenche id do grupo.
-        payload.header.group_id = _rsu_handler->getCurrentGroupID();
+        payload.header.quadrant_id = _rsu_handler->getCurrentGroupID();
         // Preenche MAC da mensagem.
-        payload.header.mac = _rsu_handler->generate_mac(payload.header, _rsu_handler->getGroupMAC(payload.header.group_id));
+        payload.header.mac = _rsu_handler->generate_mac(payload.header, _rsu_handler->getGroupMAC(payload.header.quadrant_id));
         //std::cout << "ENVIANDO MSG COM ID DO GRUPO: " << (int)payload.header.group_id << std::endl;
     }
 
@@ -121,8 +121,8 @@ void Protocol::receive(void* buf) {
                 payload.header.type != Ethernet::TYPE_PTP_DELAY_RESP &&
                 payload.header.type != Ethernet::TYPE_RSU_JOIN_RESP) {
                 // Descarta mensagens de grupos que o veiculo nao pertence e nao eh vizinho.
-                if (payload.header.group_id != _rsu_handler->getCurrentGroupID() &&
-                    !_rsu_handler->isNeighborGroup(payload.header.group_id)) {
+                if (payload.header.quadrant_id != _rsu_handler->getCurrentGroupID() &&
+                    !_rsu_handler->isNeighborGroup(payload.header.quadrant_id)) {
                     return;
                 } else {
                     //std::cout << (int)_rsu_handler->getCurrentGroupID() << " RECEBEU INTERESSE EM POSICAO DO GRUPO: " << (int)payload.header.group_id << std::endl;
@@ -143,7 +143,7 @@ void Protocol::receive(void* buf) {
     message.setType(payload.header.type);                // Tipo da mensagem
     message.setPeriod(payload.header.period);            // Período de transmissão
     message.setTimestamp(std::chrono::time_point<std::chrono::system_clock>(std::chrono::nanoseconds(payload.header.timestamp))); // Horario de envio
-    message.setGroupID(payload.header.group_id);         // Identificador do grupo
+    message.setGroupID(payload.header.quadrant_id);         // Identificador do grupo
     message.setMAC(payload.header.mac);                  // MAC da mensagem
     message.setData(payload.data, sizeof(payload.data)); // Copia os dados para a mensagem
 

@@ -18,7 +18,7 @@ public:
     using Period = uint16_t;                    // (2 bytes)
     using Timestamp = uint64_t;                 // (8 bytes)
     using MAC_key = std::array<uint8_t, 16>;    // (16 bytes)
-    using Group_ID = uint8_t;                   // (1 byte)
+    using Quadrant_ID = uint8_t;                // (1 byte)
 
     // Tipos de dados utilizados pelo Time Synchronization Manager (PTP - IEEE 1588).
     Ethernet::Type constexpr static TYPE_PTP_SYNC = 0x0;        // (4 bytes) Tipo de dado PTP Sync
@@ -68,13 +68,13 @@ public:
 
     // Estrutura para armazenar o cabeçalho da aplicação.
     struct Header { // (59 bytes)
-        Address src_address; // Endereço de origem (14 bytes)
-        Address dst_address; // Endereço de destino (14 bytes)
-        Type type;           // Tipo do dado (4 bytes)
-        Period period = 0;   // Período de transmissão em milissegundos (max 65s) (2 bytes)
-        Timestamp timestamp; // Timestamp do envio da mensagem (8 bytes)
-        MAC_key mac;         // Message Authentication Code (16 bytes)
-        Group_ID group_id;   // Identificador do grupo (1 byte)
+        Address src_address;        // Endereço de origem (14 bytes)
+        Address dst_address;        // Endereço de destino (14 bytes)
+        Type type;                  // Tipo do dado (4 bytes)
+        Period period = 0;          // Período de transmissão em milissegundos (max 65s) (2 bytes)
+        Timestamp timestamp;        // Timestamp do envio da mensagem (8 bytes)
+        MAC_key mac;                // Message Authentication Code (16 bytes)
+        Quadrant_ID quadrant_id;    // Identificador do quadrante (1 byte)
     } __attribute__((packed));
 
     // Estrutura para armazenar o payload da aplicação.

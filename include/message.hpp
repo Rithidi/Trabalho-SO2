@@ -71,8 +71,8 @@ public:
     }
 
     // Define o identificador do grupo
-    void setGroupID(Ethernet::Group_ID group_id) {
-        _header.group_id = group_id;
+    void setGroupID(Ethernet::Quadrant_ID group_id) {
+        _header.quadrant_id = group_id;
     }
 
     // Retorna o endereco de origem da mensagem
@@ -106,8 +106,8 @@ public:
     }
 
     // Retorna o identificador do grupo
-    Ethernet::Group_ID getGroupID() const {
-        return _header.group_id;
+    Ethernet::Quadrant_ID getGroupID() const {
+        return _header.quadrant_id;
     }
 
 private:

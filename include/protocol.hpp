@@ -15,7 +15,7 @@ using Address = Ethernet::Address;
 using Type = Ethernet::Type;
 using Period = Ethernet::Period;
 using MAC_key = Ethernet::MAC_key;
-using Group_ID = Ethernet::Group_ID;
+using Quadrant_ID = Ethernet::Quadrant_ID;
 
 // Forward declaration para evitar inclusão circular
 class DataPublisher; 
@@ -30,7 +30,7 @@ public:
             RSUHandler* rsu_handler = nullptr, TimeSyncManager* tsm = nullptr);
     ~Protocol();
 
-    int send(Address from, Address to, Type type, Period period, Group_ID group_id, MAC_key mac, const void* data, unsigned int size);
+    int send(Address from, Address to, Type type, Period period, Quadrant_ID group_id, MAC_key mac, const void* data, unsigned int size);
     void receive(void* buf);
 
     void attach(Concurrent_Observer* obs);
