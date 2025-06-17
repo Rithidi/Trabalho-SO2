@@ -64,7 +64,7 @@ class RSUHandler {
         }
 
         // Gera MAC usando o cabeçalho da mensagem (exeto campo mac) e a chave doo grupo.
-        Ethernet::MAC_key generate_mac(const Ethernet::Header& header, const Ethernet::MAC_key group_key) {
+        Ethernet::MAC_key generate_mac(const Ethernet::ExternalHeader& header, const Ethernet::MAC_key group_key) {
             // Faz XOR dos bytes do cabeçalho (exeto mac) com a chave do grupo.
             Ethernet::MAC_key mac;
 
@@ -75,9 +75,9 @@ class RSUHandler {
             const uint8_t* data = reinterpret_cast<const uint8_t*>(&header);
 
             // Calcula o tamanho do cabeçalho sem o campo MAC (últimos 17 bytes: 16 de MAC + 1 de group_id)
-            constexpr size_t mac_offset = offsetof(Ethernet::Header, mac);
+            constexpr size_t mac_offset = offsetof(Ethernet::ExternalHeader, mac);
             constexpr size_t mac_field_size = sizeof(Ethernet::MAC_key) + sizeof(Ethernet::Quadrant_ID);
-            const size_t size_to_hash = sizeof(Ethernet::Header) - mac_field_size;
+            const size_t size_to_hash = sizeof(Ethernet::ExternalHeader) - mac_field_size;
 
             // Faz XOR do conteúdo do header com os 16 bytes do MAC base
             for (size_t i = 0; i < size_to_hash; ++i) {
@@ -88,7 +88,7 @@ class RSUHandler {
         }
 
         // Verifica MAC da mensagem para cada chave de grupo (pertencente e vizinhos).
-        bool verify_mac(const Ethernet::Header& header) {
+        bool verify_mac(const Ethernet::ExternalHeader& header) {
             // Verifica MAC com chave do grupo que o veiculo pertence.
             if (header.mac == generate_mac(header, group_mac)) {
                 return true;

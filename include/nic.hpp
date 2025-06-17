@@ -45,7 +45,7 @@ public:
     
     Buffer* alloc();
     int send(Buffer* buf, bool internal);
-    void receive(const Frame* frame, size_t size);
+    void receive(const Frame* frame, size_t size, bool is_internal);
     const Statistics& get_statistics() const;
     
     void free(Buffer* buf);

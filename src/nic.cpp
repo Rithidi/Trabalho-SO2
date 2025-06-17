@@ -19,10 +19,10 @@ NIC<Engine>::Buffer::Buffer(const Frame& f, size_t s) : frame(f), size(s) {}
 template <typename Engine>
 NIC<Engine>::NIC(const std::string& interface)
     : engine(std::make_unique<Engine>(interface, [this](const void* data, size_t size) {
-          this->receive(reinterpret_cast<const Frame*>(data), size);
+          this->receive(reinterpret_cast<const Frame*>(data), size, false);
       }, true)),
       internal_engine(std::make_unique<InternalEngine>(interface, [this](const void* data, size_t size) {
-          this->receive(reinterpret_cast<const Frame*>(data), size);
+          this->receive(reinterpret_cast<const Frame*>(data), size, true);
       }, true)) { // Member initializer list ends here
     // Inicializa uma semente aleatória.
     srand(getpid()); // Inicializa a semente com o PID do processo atual.
@@ -83,7 +83,7 @@ int NIC<Engine>::send(Buffer* buf, bool internal) {
 
 // Método chamado pelo Engine quando um frame é recebido
 template <typename Engine>
-void NIC<Engine>::receive(const Frame* frame, size_t size) {
+void NIC<Engine>::receive(const Frame* frame, size_t size, bool is_internal) {
 
     // Aloca dinamicamente um buffer com o frame recebido
     Buffer* buffer = new Buffer(*frame, size);
@@ -92,7 +92,7 @@ void NIC<Engine>::receive(const Frame* frame, size_t size) {
     Ethernet::Protocol_Number protocol = ntohs(frame->type);
 
     // Notifica o observador do protocolo correspondente, passando o ponteiro do buffer
-    observed.notify(protocol, buffer);
+    observed.notify(protocol, buffer, is_internal);
 }
 
 // Retorna as estatísticas atuais da interface

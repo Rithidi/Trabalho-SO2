@@ -18,7 +18,7 @@ public:
     ~Communicator();
 
     // Envia uma mensagem
-    bool send(const Message* message);
+    bool send(Message* message);
 
     // Recebe uma mensagem
     bool receive(Message* message);

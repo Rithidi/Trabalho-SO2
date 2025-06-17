@@ -31,7 +31,12 @@ public:
     ~Protocol();
 
     int send(Address from, Address to, Type type, Period period, Quadrant_ID group_id, MAC_key mac, const void* data, unsigned int size);
-    void receive(void* buf);
+    void processInternalSend(Ethernet::InternalPayload* payload, Ethernet::Thread_ID src_component, Ethernet::Thread_ID dst_component, Type type, Period period);
+    void processExternalSend(Ethernet::ExternalPayload* payload, Address from, Address to, Type type, Period period, Quadrant_ID group_id, MAC_key mac);
+
+    void receive(void* buf, bool is_internal);
+    void processInternalReceive(Ethernet::InternalPayload payload);
+    void processExternalReceive(Ethernet::ExternalPayload payload);
 
     void attach(Concurrent_Observer* obs);
     void detach(Concurrent_Observer* obs);

@@ -114,9 +114,9 @@ public:
         static constexpr size_t mtu() { return MAX_PAYLOAD; }
     } __attribute__((packed));
 
-    // Metodo para preencher o payload do frame.
-    bool fillPayload(Ethernet::Frame* frame, const Payload* payload) {
-        size_t payload_size = sizeof(Ethernet::Payload);
+    // Metodo para preencher o payload do frame de comunicação interna.
+    bool fillInternalPayload(Ethernet::Frame* frame, const Ethernet::InternalPayload* payload) {
+        size_t payload_size = sizeof(Ethernet::InternalPayload);
         // Verifica se o tamanho do payload não excede o máximo permitido
         if (payload_size > Ethernet::MAX_PAYLOAD) {
             std::cerr << "Payload size exceeds maximum allowed size: " << payload_size << " > " << Ethernet::MAX_PAYLOAD << std::endl;
@@ -127,9 +127,28 @@ public:
         return true;
     }
 
-    // Metodo para extrair o payload do frame.
-    void extractPayload(Ethernet::Frame* frame, Ethernet::Payload* payload) {
+    // Metodo para preencher o payload do frame de comunicação externa.
+    bool fillExternalPayload(Ethernet::Frame* frame, const Ethernet::ExternalPayload* payload) {
+        size_t payload_size = sizeof(Ethernet::ExternalPayload);
+        // Verifica se o tamanho do payload não excede o máximo permitido
+        if (payload_size > Ethernet::MAX_PAYLOAD) {
+            std::cerr << "Payload size exceeds maximum allowed size: " << payload_size << " > " << Ethernet::MAX_PAYLOAD << std::endl;
+            return false;
+        }
+        // Copiar a estrutura Payload para o vetor de bytes frame->payload
+        std::memcpy(frame->payload, payload, payload_size);
+        return true;
+    }
+
+    // Metodo para extrair o payload do frame de comunicação interna.
+    void extractInternalPayload(Ethernet::Frame* frame, Ethernet::InternalPayload* payload) {
         // Copia o conteúdo do vetor de bytes frame->payload para a estrutura Payload
-        std::memcpy(payload, frame->payload, sizeof(Ethernet::Payload));
+        std::memcpy(payload, frame->payload, sizeof(Ethernet::InternalPayload));
+    }
+
+    // Metodo para extrair o payload do frame de comunicação externa.
+    void extractExternalPayload(Ethernet::Frame* frame, Ethernet::ExternalPayload* payload) {
+        // Copia o conteúdo do vetor de bytes frame->payload para a estrutura Payload
+        std::memcpy(payload, frame->payload, sizeof(Ethernet::ExternalPayload));
     }
 };

@@ -22,7 +22,7 @@ Communicator::~Communicator() {
     _protocol->detach(&observer);
 }
 
-bool Communicator::send(const Message* message) {
+bool Communicator::send(Message* message) {
     return (_protocol->send(_address, message->getDstAddress(), message->getType(),
             message->getPeriod(), message->getGroupID(), message->getMAC(), message->data(), message->size()) > 0);
 }
