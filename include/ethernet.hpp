@@ -66,21 +66,35 @@ public:
         }
     } __attribute__((packed));
 
-    // Estrutura para armazenar o cabeçalho da aplicação.
-    struct Header { // (59 bytes)
+    // Estrutura para armazenar o cabeçalho de comunicação externa.
+    struct ExternalHeader { // (59 bytes)
         Address src_address;        // Endereço de origem (14 bytes)
         Address dst_address;        // Endereço de destino (14 bytes)
         Type type;                  // Tipo do dado (4 bytes)
         Period period = 0;          // Período de transmissão em milissegundos (max 65s) (2 bytes)
         Timestamp timestamp;        // Timestamp do envio da mensagem (8 bytes)
-        MAC_key mac;                // Message Authentication Code (16 bytes)
+        MAC_key mac = {0};          // Message Authentication Code (16 bytes)
         Quadrant_ID quadrant_id;    // Identificador do quadrante (1 byte)
     } __attribute__((packed));
+ 
+    // Estrutura para armazenar o payload da aplicação de comunicação externa.
+    struct ExternalPayload {
+        ExternalHeader header;  // Cabeçalho da aplicacao 59 bytes
+        uint8_t data[1427];     // Mensagem a ser transmitida 1427 bytes
+    } __attribute__((packed));
 
-    // Estrutura para armazenar o payload da aplicação.
-    struct Payload {
-        Header header; // Cabeçalho da aplicacao 59 bytes
-        uint8_t data[1427]; // Mensagem a ser transmitida 1427 bytes
+    // Estrutura para armazenar o cabeçalho de comunicação interna.
+    struct InternalHeader { // (22 bytes)
+        Thread_ID src_component_id = (pthread_t)0;  // ID do Componente de origem (8 bytes)
+        Thread_ID dst_component_id = (pthread_t)0;  // ID do Componente de destino (8 bytes)
+        Type type;                                  // Tipo do dado (4 bytes)
+        Period period = 0;                          // Período de transmissão em milissegundos (max 65s) (2 bytes)
+    } __attribute__((packed));
+
+    // Estrutura para armazenar o payload da aplicação de comunicação interna.
+    struct InternalPayload {
+        InternalHeader header;  // Cabeçalho da aplicacao 22 bytes
+        uint8_t data[1464];     // Mensagem a ser transmitida 1464 bytes
     } __attribute__((packed));
 
     // Tamanho do cabeçalho Ethernet em bytes (destino + origem + tipo)

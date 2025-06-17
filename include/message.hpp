@@ -66,13 +66,18 @@ public:
     }
 
     // Define o MAC (Message Authentication Code)
-    void setMAC(Ethernet::MAC_key mac) {
-        _header.mac = mac;
+    void setMAC(Ethernet::MAC_key mac_key) {
+        _header.mac = mac_key;
     }
 
     // Define o identificador do grupo
     void setGroupID(Ethernet::Quadrant_ID group_id) {
         _header.quadrant_id = group_id;
+    }
+
+    // Define a chave MAC do grupo
+    void setGroupKey(Ethernet::MAC_key key) {
+        _group_key = key;
     }
 
     // Retorna o endereco de origem da mensagem
@@ -101,7 +106,15 @@ public:
     }
 
     // Retorna o MAC (Message Authentication Code) da mensagem
-    Ethernet::MAC_key getMAC() const {
+    Ethernet::MAC_key getMAC() {
+        // Gera MAC se for mensagem de comunicação interna.
+        if (_header.src_address.vehicle_id == _header.dst_address.vehicle_id) {
+            Ethernet::MAC_key key = {0};
+            // Verifica se MAC nao foi gerado anteriormente.
+            if (_header.mac == key) {
+                _header.mac = generate_mac(_header, _group_key);
+            }
+        } 
         return _header.mac;
     }
 
@@ -111,8 +124,34 @@ public:
     }
 
 private:
-    // Cabeçalho da mensagem (endereços de origem e destino, tipo e período)
-    Ethernet::Header _header;
+    // Gera MAC usando o cabeçalho da mensagem (exeto campo mac) e a chave doo grupo.
+    Ethernet::MAC_key generate_mac(const Ethernet::ExternalHeader& header, const Ethernet::MAC_key group_key) {
+        // Faz XOR dos bytes do cabeçalho (exeto mac) com a chave do grupo.
+        Ethernet::MAC_key mac;
+
+        // Copia a chave do grupo como base do MAC
+        std::memcpy(mac.data(), group_key.data(), 16);
+
+        // Obtém ponteiro para o início do header
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(&header);
+
+        // Calcula o tamanho do cabeçalho sem o campo MAC (últimos 17 bytes: 16 de MAC + 1 de group_id)
+        constexpr size_t mac_offset = offsetof(Ethernet::ExternalHeader, mac);
+        constexpr size_t mac_field_size = sizeof(Ethernet::MAC_key) + sizeof(Ethernet::Quadrant_ID);
+        const size_t size_to_hash = sizeof(Ethernet::ExternalHeader) - mac_field_size;
+
+        // Faz XOR do conteúdo do header com os 16 bytes do MAC base
+        for (size_t i = 0; i < size_to_hash; ++i) {
+            mac[i % 16] ^= data[i];
+        }
+        return mac;
+    }
+
+private:
+    // Cabeçalho da mensagem (suporte para comunicação: externa e interna)
+    Ethernet::ExternalHeader _header;
+    // Chave MAC do grupo (utilizada no get MAC para comunicação interna)
+    Ethernet::MAC_key _group_key;
     // Buffer que armazena os dados da mensagem
     uint8_t _data[MAX_SIZE];
     // Tamanho real da mensagem armazenada

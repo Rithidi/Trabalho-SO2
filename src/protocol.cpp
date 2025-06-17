@@ -84,6 +84,27 @@ int Protocol::send(Address from, Address to, Type type, Period period, Quadrant_
     return _nic->send(buf, is_internal);
 }
 
+void Protocol::processInternalReceive(Ethernet::InternalPayload payload) {
+    // Monta mensagem com o cabeçalho e os dados recebidos.
+    Message message;
+    message.setSrcAddress({_nic.get_address(), payload.header.src_component_id});   // Endereço de origem
+    message.setDstAddress({_nic.get_address(), payload.header.dst_component_id});   // Endereço de destino
+    message.setType(payload.header.type);                                           // Tipo da mensagem
+    message.setPeriod(payload.header.period);                                       // Período de transmissão
+    message.setTimestamp(_time_sync_manager->now());                                // Horario de envio
+    message.setMAC(payload.header.mac);                                             // MAC da mensagem
+    message.setData(payload.data, sizeof(payload.data));                            // Copia os dados para a mensagem
+
+    // Encaminha mensagens de interesse direto para o DataPublisher.
+    if (pthread_equal(payload.header.dst_address.component_id, (pthread_t)0)) {
+        _data_publisher->notify(message);
+    } else {
+        // Notifica os observadores com o endereço de destino e a mensagem
+        _observed.notify(message);
+    }
+}
+void Protocol::processExternalReceive(Ethernet::ExternalPayload payload);
+
 void Protocol::receive(void* buf) {
     // Conversão direta de void* para Buffer*
     Buffer* buffer = static_cast<Buffer*>(buf);
@@ -97,7 +118,7 @@ void Protocol::receive(void* buf) {
     // Libera o buffer após o uso
     delete buffer;
 
-    // Se for RSU: descarta qual mensagem que nao seja JOIN REQ ou DELAY REQ.
+    // Se for RSU: descarta mensagens que nao sao JOIN REQ ou DELAY REQ.
     if (_rsu_handler == nullptr && 
         payload.header.type != Ethernet::TYPE_PTP_DELAY_REQ &&
         payload.header.type != Ethernet::TYPE_RSU_JOIN_REQ) {

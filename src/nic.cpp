@@ -93,9 +93,6 @@ void NIC<Engine>::receive(const Frame* frame, size_t size) {
 
     // Notifica o observador do protocolo correspondente, passando o ponteiro do buffer
     observed.notify(protocol, buffer);
-
-    // Libera o buffer após a notificação
-    //delete buffer;
 }
 
 // Retorna as estatísticas atuais da interface
